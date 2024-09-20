@@ -108,7 +108,7 @@ export const config = {
             "visual",
             {
                 // Some options, see the docs for more
-                baselineFolder: path.join(process.cwd(), "tests", "baseline"),
+                baselineFolder: path.join(process.cwd(), "tests/visual-testing", "baseline"),
                 formatImageName: "{tag}-{logName}-{width}x{height}",
                 screenshotPath: path.join(process.cwd(), "tmp"),
                 savePerInstance: true,
