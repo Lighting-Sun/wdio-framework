@@ -19,7 +19,7 @@ describe('login related scenarios', () => {
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
     });
 
-    it('Should show an error when logging with invalid user', async () => {
+    it('Should show an error when login with invalid user', async () => {
         await loginPage.fillUsername(data.users.invalidUser.username);
         await loginPage.fillPassword(data.users.invalidUser.password);
         await loginPage.clicklOnLoginBtn();
