@@ -12,11 +12,17 @@ describe('login related scenarios', () => {
     //reading the datafile
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
     it('Should successfuly log in with a valid user', async () => {
-        await loginPage.fillUsername(data.users.standard);
-        await loginPage.fillPassword(data.password.valid);
+        await loginPage.fillUsername(data.users.validUser.username);
+        await loginPage.fillPassword(data.users.validUser.password);
         await loginPage.clicklOnLoginBtn();
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
     });
 
+    it('Should show an error when login with invalid user', async () => {
+        await loginPage.fillUsername(data.users.invalidUser.username);
+        await loginPage.fillPassword(data.users.invalidUser.password);
+        await loginPage.clicklOnLoginBtn();
+        await expect(await loginPage.getLoginErrorMessage()).toEqual(data.loginErrorMessage);
+    });
 });

@@ -16,7 +16,7 @@ class LoginPage extends Page {
             description: "password input field",
         },
         loginErrorMessage: {
-            selector: "button[data-test='error-button']",
+            selector: "h3[data-test='error']",
             description: "login error message",
         },
     };
@@ -33,6 +33,10 @@ class LoginPage extends Page {
     }
     async clicklOnLoginBtn() {
         await this.wdioFactory.click(this.locators.loginButton);
+    }
+
+    async getLoginErrorMessage() {
+        return await this.wdioFactory.getText(this.locators.loginErrorMessage);
     }
 }
 
