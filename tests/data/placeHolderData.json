@@ -1,0 +1,12 @@
+{
+    "users": {
+        "standard":"standard_user",
+        "lockedOut":"locked_out_user"
+    },
+
+    "password":{
+        "valid":"secret_sauce",
+        "incorrect":"sauce_secret"
+    },
+    "loginErrorMessage":"Epic sadface: Sorry, this user has been locked out."
+}

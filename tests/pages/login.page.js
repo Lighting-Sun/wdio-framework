@@ -1,40 +1,38 @@
-import { $ } from '@wdio/globals';
 import Page from './page.js';
 
-/**
- * sub page containing specific selectors and methods for a specific page
- */
 class LoginPage extends Page {
-    /**
-     * define selectors using getter methods
-     */
-    get inputUsername() {
-        return $('#username');
+
+    locators = {
+        loginButton: {
+            selector: "#login-button",
+            description: "login button for the saucedemo application",
+        },
+        usernameInput: {
+            selector: "input[data-test='username']",
+            description: "username input field",
+        },
+        passwordInput: {
+            selector: "input[data-test='password']",
+            description: "password input field",
+        },
+        loginErrorMessage: {
+            selector: "button[data-test='error-button']",
+            description: "login error message",
+        },
+    };
+
+    async openPage() {
+        await this.open('https://www.saucedemo.com/');
     }
 
-    get inputPassword() {
-        return $('#password');
+    async fillUsername(username) {
+        await this.wdioFactory.setValue(this.locators.usernameInput, username);
     }
-
-    get btnSubmit() {
-        return $('button[type="submit"]');
+    async fillPassword(password) {
+        await this.wdioFactory.setValue(this.locators.passwordInput, password);
     }
-
-    /**
-     * a method to encapsule automation code to interact with the page
-     * e.g. to login using username and password
-     */
-    async login(username, password) {
-        await this.inputUsername.setValue(username);
-        await this.inputPassword.setValue(password);
-        await this.btnSubmit.click();
-    }
-
-    /**
-     * overwrite specific options to adapt it to page object
-     */
-    open() {
-        return super.open('login');
+    async clicklOnLoginBtn() {
+        await this.wdioFactory.click(this.locators.loginButton);
     }
 }
 
