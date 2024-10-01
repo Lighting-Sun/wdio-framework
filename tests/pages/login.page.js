@@ -19,6 +19,10 @@ class LoginPage extends Page {
             selector: "h3[data-test='error']",
             description: "login error message",
         },
+        loginLogo: {
+            selector: "div.login_logo",
+            description: "Swag Labs logo in login page",
+        },
     };
 
     async openPage() {
@@ -37,6 +41,10 @@ class LoginPage extends Page {
 
     async getLoginErrorMessage() {
         return await this.wdioFactory.getText(this.locators.loginErrorMessage);
+    }
+
+    async getLoginLogoText() {
+        return await this.wdioFactory.getText(this.locators.loginLogo);
     }
 }
 
