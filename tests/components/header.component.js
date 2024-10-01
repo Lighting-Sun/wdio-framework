@@ -1,6 +1,9 @@
 import BaseComponent from "./base.component";
-
+import SideMenu from "./sidemenu.component";
 class Header extends BaseComponent {
+
+    sideMenu = new SideMenu();
+
     locators = {
         burgerMenuBtn: {
             selector: ".bm-burger-button",
@@ -24,8 +27,12 @@ class Header extends BaseComponent {
         }
     };
 
-    getPageTitleText() {
-        return this.wdioFactoryUtils.getText(this.locators.pageTitle);
+    async getPageTitleText() {
+        return await this.wdioFactoryUtils.getText(this.locators.pageTitle);
+    }
+
+    async clickOnBurgerMenuBtn() {
+        await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
     }
 }
 

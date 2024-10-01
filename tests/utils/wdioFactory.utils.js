@@ -9,9 +9,9 @@ export default class WdioFactoryUtils {
         await elementSelector.click();
     }
 
-    async getElementByValue(objElement, strValue) {
-        const elementSelector = $(objElement.selector.replace('${value}', strValue));
-        const elementDescription = $(objElement.selector.replace('${value}', strValue));
+    async getSelectorByValue(objElement, strValue) {
+        const elementSelector = await objElement.selector.replace('${value}', strValue);
+        const elementDescription = await objElement.description.replace('${value}', strValue);
         return {
             selector: elementSelector,
             description: elementDescription,

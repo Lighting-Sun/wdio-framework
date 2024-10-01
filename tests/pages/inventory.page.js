@@ -20,7 +20,7 @@ class Inventory extends Page {
     };
 
     async clickAddToCartByItemName(strItemName) {
-        const element = await this.wdioFactory.getElementByValue(this.locators.addToCartButtonBasedOnItemName, strItemName);
+        const element = await this.wdioFactory.getSelectorByValue(this.locators.addToCartButtonBasedOnItemName, strItemName);
         await this.wdioFactory.click(element);
     }
 
