@@ -1,4 +1,5 @@
 import Header from '../components/header.component';
+import UtilsMethods from '../utils/utilsMethods.utils';
 import Page from './page';
 
 class Inventory extends Page {
@@ -22,7 +23,7 @@ class Inventory extends Page {
             description: "inventory item price based on index ${value}'",
         },
         inventoryItemNameIndex: {
-            selector: "div[data-test='inventory-item']:nth-of-type(${value}) div[class='inventory_item_name']",
+            selector: "div[data-test='inventory-item']:nth-of-type(${value}) div[class='inventory_item_name ']",
             description: "inventory item name based on index ${value}'",
         },
         inventoryAddCartItemButtonIndex: {
@@ -74,6 +75,18 @@ class Inventory extends Page {
 
     async getNumberOfItems() {
         return (await this.wdioFactory.getElements(this.locators.inventoryItemCard)).length;
+    }
+
+    async addRandomItemsToCart() {
+        const detailsPromises = [];
+        const numberOfItems = await this.getNumberOfItems();
+        const indexesToAdd = await UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
+
+        for await (const index of indexesToAdd) {
+            detailsPromises.push(this.clickAndGetDetailsFromItemIndex(index));
+        }
+        const itemDetails = await Promise.all(detailsPromises);
+        return itemDetails;
     }
 }
 export default new Inventory();

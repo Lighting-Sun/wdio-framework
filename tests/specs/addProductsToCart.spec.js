@@ -20,6 +20,7 @@ describe('product pruchase scenarios', () => {
         await loginPage.clicklOnLoginBtn();
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
+        console.log(await inventoryPage.addRandomItemsToCart());
     });
 
 });
