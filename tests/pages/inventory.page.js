@@ -27,5 +27,11 @@ class Inventory extends Page {
     async clickSelectContainer() {
         await this.wdioFactory.click(this.locators.sortFilterDropdown);
     }
+
+    async getTextFromPrices() {
+        const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
+        const trimmedPrice = textFromPrices.map(textToTrim => textToTrim.slice(1));
+        return trimmedPrice;
+    }
 }
 export default new Inventory();

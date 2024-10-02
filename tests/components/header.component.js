@@ -18,12 +18,12 @@ class Header extends BaseComponent {
             description: "title located in the header, indicating in which page we are on",
         },
         sortFilterDropdown: {
-            selector: "span.select_container",
+            selector: "select.product_sort_container",
             description: "sort filter dropdown",
         },
-        lowToHighSelectOption: {
-            selector: "option[value='lohi']",
-            description: "lohi select option",
+        selectDropdownOption: {
+            selector: "select option[value='${value}']",
+            description: "'${value}' select option",
         }
     };
 
@@ -33,6 +33,11 @@ class Header extends BaseComponent {
 
     async clickOnBurgerMenuBtn() {
         await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
+    }
+
+    async clickOnSortFilterDropdownOption(strValue) {
+        await this.wdioFactoryUtils.click(this.locators.sortFilterDropdown);
+        await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', strValue);
     }
 }
 
