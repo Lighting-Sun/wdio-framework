@@ -25,7 +25,7 @@ describe('login related scenarios', () => {
         await loginPage.clicklOnLoginBtn();
         await expect(await loginPage.getLoginErrorMessage()).toEqual(data.loginErrorMessage);
     });
-  
+
     it('Should logout successfully when already logged in', async () => {
         await loginPage.fillUsername(data.users.validUser.username);
         await loginPage.fillPassword(data.users.validUser.password);
