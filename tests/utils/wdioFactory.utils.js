@@ -51,4 +51,16 @@ export default class WdioFactoryUtils {
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
         await elementSelector.selectByAttribute(strAttr, srtValue);
     }
+
+    async clickAllIfExists(objElement) {
+        let element = await $(objElement.selector);
+        let isClickable = await element.waitForClickable({ timeout: 1000 }).catch(() => false);
+
+        while (isClickable) {
+            await this.click(objElement);
+            element = await $(objElement.selector);
+            isClickable = await element.waitForClickable({ timeout: 1000 }).catch(() => false);
+        }
+        console.log("📢 There are no more elements to be clicked!");
+    }
 }
