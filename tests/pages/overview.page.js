@@ -46,7 +46,7 @@ class OverviewPage extends Page {
     }
 
     async clickOnFinishButton() {
-        await this.wdioFactory.click(finishButton);
+        await this.wdioFactory.click(this.locators.finishButton);
     }
 
 }

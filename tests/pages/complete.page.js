@@ -13,7 +13,7 @@ class CompletePage extends Page {
     };
 
     async getCompletePurchaseText() {
-        return this.wdioFactory.getText(completePurchaseHeader);
+        return this.wdioFactory.getText(this.locators.completePurchaseHeader);
     }
 }
 export default new CompletePage;

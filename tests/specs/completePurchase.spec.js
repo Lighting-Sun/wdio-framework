@@ -3,7 +3,7 @@ import inventoryPage from "../pages/inventory.page";
 import cartPage from "../pages/cart.page";
 import checkoutPage from "../pages/checkout.page";
 import overviewPage from "../pages/overview.page";
-
+import completePage from "../pages/complete.page";
 //this import is used to read files with data, see placeHolderData.js
 import { readFileSync } from "fs";
 import UtilsMethods from "../utils/utilsMethods.utils";
@@ -48,6 +48,10 @@ describe('complete purchase scenarios', () => {
         const overviewSumPrices = await UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
         const overviewSubTotalPrice = await overviewPage.getSubTotalValue();
         await expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
+        await overviewPage.clickOnFinishButton();
+        await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'));
+        await expect(await completePage.header.getPageTitleText()).toEqual('Checkout: Complete!');
+        await expect(await completePage.getCompletePurchaseText()).toEqual('Thank you for your order!');
     });
 
 
