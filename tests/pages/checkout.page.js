@@ -2,6 +2,8 @@ import Page from './page.js';
 
 class CheckoutPage extends Page {
 
+    header = new Header();
+
     locators = {
         firstNameInput: {
             selector: "#first-name",
@@ -18,9 +20,23 @@ class CheckoutPage extends Page {
         continueButton: {
             selector: "#continue",
             description: "continue button",
-        }
-
+        },
     };
 
+    async fillFirstName(firstName) {
+        await this.wdioFactory.setValue(this.locators.firstNameInput, firstName);
+    }
+
+    async fillLastName(lastName) {
+        await this.wdioFactory.setValue(this.locators.lastNameInput, lastName);
+    }
+
+    async fillPostalCode(postalCode) {
+        await this.wdioFactory.setValue(this.locators.postalCodeInput, postalCode);
+    }
+
+    async clickContinueButton() {
+        await this.wdioFactory.click(this.locators.continueButton);
+    }
 }
 export default new CheckoutPage();
