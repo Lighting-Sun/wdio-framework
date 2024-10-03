@@ -18,6 +18,10 @@ class CartPage extends Page {
         itemCartRemoveButton: {
             selector: "button[data-test^='remove']",
             description: "item remove from cart button"
+        },
+        checkoutButton: {
+            selector: "button[data-test='checkout']",
+            description: "checkout button"
         }
     };
 
@@ -37,6 +41,10 @@ class CartPage extends Page {
             const elementCount = (await this.wdioFactory.getElements(this.locators.itemCartRemoveButton)).length;
             return elementCount === 0;
         }, { timeoutMsg: `💥 ${this.locators.itemCartRemoveButton.description} was found!, none should be existent` });
+    }
+
+    async clickOnCheckoutButton() {
+        await this.wdioFactory.click(this.locators.checkoutButton);
     }
 }
 
