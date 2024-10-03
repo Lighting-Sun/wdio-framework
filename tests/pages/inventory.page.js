@@ -119,5 +119,15 @@ class Inventory extends Page {
         const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName);
         return await this.wdioFactory.click(selector);
     }
+
+    async clickAndGetDetailsFromItemName(value) {
+        const itemNameText = await this.getInventoryItemNameByNameText(value);
+        const itemPriceText = await this.getInventoryItemPriceByNameText(value);
+        await this.clickInventoryItemAddToCartByName(value);
+        return {
+            itemName: itemNameText,
+            itemPrice: itemPriceText,
+        };
+    }
 }
 export default new Inventory();
