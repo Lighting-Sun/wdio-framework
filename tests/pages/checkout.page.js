@@ -1,3 +1,4 @@
+import Header from '../components/header.component.js';
 import Page from './page.js';
 
 class CheckoutPage extends Page {

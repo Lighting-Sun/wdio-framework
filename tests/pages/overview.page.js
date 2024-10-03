@@ -30,6 +30,11 @@ class OverviewPage extends Page {
         return trimmedPrice;
     }
 
+    async getTextFromPrices() {
+        const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);;
+        return textFromPrices;
+    }
+
     async getItemOverviewNames() {
         const itemCartNames = await this.wdioFactory.getElements(this.locators.overviewItemNames);
         return await this.wdioFactory.getTextFromElements(itemCartNames);

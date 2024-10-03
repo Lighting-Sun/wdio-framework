@@ -2,6 +2,7 @@ import loginPage from "../pages/login.page";
 import inventoryPage from "../pages/inventory.page";
 import cartPage from "../pages/cart.page";
 import checkoutPage from "../pages/checkout.page";
+import overviewPage from "../pages/overview.page";
 
 //this import is used to read files with data, see placeHolderData.js
 import { readFileSync } from "fs";
@@ -35,7 +36,14 @@ describe('complete purchase scenarios', () => {
         await cartPage.clickOnCheckoutButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
         await expect(await checkoutPage.header.getPageTitleText()).toEqual('Checkout: Your Information');
-        await checkoutPage.fillPersonalInformationForm(data.personalInfo.firstName, data.personalInfo.lastName);
+        await checkoutPage.fillPersonalInformationForm(data.personalInfo.firstName, data.personalInfo.lastName, data.personalInfo.postalCode);
+        await checkoutPage.clickContinueButton();
+        await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
+        await expect(await overviewPage.header.getPageTitleText()).toEqual('Checkout: Overview');
+        const overviewNames = await overviewPage.getItemOverviewNames();
+        const overviewPrices = await overviewPage.getTextFromPrices();
+        await expect(overviewNames).toEqual(cartNames);
+        await expect(overviewPrices).toEqual(cartPrices);
     });
 
 
