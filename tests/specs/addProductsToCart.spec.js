@@ -1,6 +1,6 @@
 import loginPage from "../pages/login.page";
 import inventoryPage from "../pages/inventory.page";
-import UtilsMethods from "../utils/utilsMethods.utils";
+import cartPage from "../pages/cart.page";
 
 //this import is used to read files with data, see placeHolderData.js
 import { readFileSync } from "fs";
@@ -20,7 +20,15 @@ describe('product pruchase scenarios', () => {
         await loginPage.clicklOnLoginBtn();
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
-        console.log(await inventoryPage.addRandomItemsToCart());
+        const result = await inventoryPage.addRandomItemsToCart();
+        const inventoryNames = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
+        const inventoryPrices = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
+        await inventoryPage.header.clickOnShoppingCartBtn();
+        const cartNames = await cartPage.getItemCartNames();
+        const cartPrices = await cartPage.getItemCartPrices();
+        //TODO might need to add extra logs for reporting.
+        await expect(inventoryNames).toEqual(cartNames);
+        await expect(inventoryPrices).toEqual(cartPrices);
     });
 
 });

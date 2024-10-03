@@ -88,5 +88,9 @@ class Inventory extends Page {
         const itemDetails = await Promise.all(detailsPromises);
         return itemDetails;
     }
+
+    async getProperyValuesFromArrayOfDetails(arrOfItemDetail, strPropertyToGet) {
+        return await arrOfItemDetail.map(detail => detail[strPropertyToGet]);
+    }
 }
 export default new Inventory();
