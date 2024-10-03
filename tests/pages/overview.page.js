@@ -24,9 +24,9 @@ class OverviewPage extends Page {
         },
     };
 
-    async getTextFromPrices() {
+    async getValuesFromPrices() {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);
-        const trimmedPrice = textFromPrices.map(textToTrim => textToTrim.slice(1));
+        const trimmedPrice = textFromPrices.map(textToTrim => textToTrim.slice(1)).map(Number);
         return trimmedPrice;
     }
 
@@ -36,7 +36,7 @@ class OverviewPage extends Page {
     }
 
     async getSubTotalValue() {
-        return (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
+        return (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '').map(Number);
     }
 
 }
