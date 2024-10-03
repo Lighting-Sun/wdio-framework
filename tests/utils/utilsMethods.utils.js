@@ -20,6 +20,12 @@ class UtilsMethods {
 
         return setFromRange;
     }
+
+    static async sumArrAndFixPresicion(arrNum, numPresicion) {
+        const reducedArr = arrNum.reduce((acum, actual) => acum + actual);
+        const sum = await reducedArr.toFixed(numPresicion);
+        return Number(sum);
+    }
 }
 
 export default UtilsMethods;

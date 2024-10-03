@@ -6,6 +6,7 @@ import overviewPage from "../pages/overview.page";
 
 //this import is used to read files with data, see placeHolderData.js
 import { readFileSync } from "fs";
+import UtilsMethods from "../utils/utilsMethods.utils";
 
 
 describe('complete purchase scenarios', () => {
@@ -44,6 +45,9 @@ describe('complete purchase scenarios', () => {
         const overviewPrices = await overviewPage.getTextFromPrices();
         await expect(overviewNames).toEqual(cartNames);
         await expect(overviewPrices).toEqual(cartPrices);
+        const overviewSumPrices = await UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
+        const overviewSubTotalPrice = await overviewPage.getSubTotalValue();
+        await expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
     });
 
 

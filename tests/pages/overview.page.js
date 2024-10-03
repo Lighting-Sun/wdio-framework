@@ -41,7 +41,8 @@ class OverviewPage extends Page {
     }
 
     async getSubTotalValue() {
-        return (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '').map(Number);
+        const subTotalText = (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
+        return Number(subTotalText);
     }
 
 }
