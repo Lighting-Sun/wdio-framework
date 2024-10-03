@@ -18,6 +18,10 @@ class OverviewPage extends Page {
             selector: "div[data-test='inventory-item-price']",
             description: "overview page item price",
         },
+        subTotalLabel: {
+            selector: "div[data-test='subtotal-label']",
+            description: "sub total label",
+        },
     };
 
     async getTextFromPrices() {
@@ -30,6 +34,11 @@ class OverviewPage extends Page {
         const itemCartNames = await this.wdioFactory.getElements(this.locators.overviewItemNames);
         return await this.wdioFactory.getTextFromElements(itemCartNames);
     }
+
+    async getSubTotalValue() {
+        return (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
+    }
+
 }
 
 export default new OverviewPage();
