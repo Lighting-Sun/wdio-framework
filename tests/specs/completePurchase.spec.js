@@ -35,6 +35,7 @@ describe('complete purchase scenarios', () => {
         await cartPage.clickOnCheckoutButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
         await expect(await checkoutPage.header.getPageTitleText()).toEqual('Checkout: Your Information');
+        await checkoutPage.fillPersonalInformationForm(data.personalInfo.firstName, data.personalInfo.lastName);
     });
 
 

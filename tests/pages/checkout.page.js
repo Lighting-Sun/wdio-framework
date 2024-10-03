@@ -39,7 +39,7 @@ class CheckoutPage extends Page {
         await this.wdioFactory.click(this.locators.continueButton);
     }
 
-    async fillPersonalIformationForm(firstName, lastName, postalCode) {
+    async fillPersonalInformationForm(firstName, lastName, postalCode) {
         await this.fillFirstName(firstName);
         await this.fillLastName(lastName);
         await this.fillPostalCode(postalCode);
