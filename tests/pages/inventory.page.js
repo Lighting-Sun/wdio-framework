@@ -75,7 +75,7 @@ class Inventory extends Page {
         return await this.wdioFactory.click(await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddCartItemButtonIndex, index));
     }
 
-    async clickAndGetDetailsFromItemIndex(index) {
+    async AddItemToCartByIndex(index) {
         const itemNameText = await this.getInventoryNameFromIndexText(index);
         const itemPriceText = await this.getInventoryPriceFromIndexText(index);
         await this.clickAddCartItemButtonFromIndex(index);
@@ -95,7 +95,7 @@ class Inventory extends Page {
         const indexesToAdd = await UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
 
         for await (const index of indexesToAdd) {
-            detailsPromises.push(this.clickAndGetDetailsFromItemIndex(index));
+            detailsPromises.push(this.AddItemToCartByIndex(index));
         }
         const itemDetails = await Promise.all(detailsPromises);
         return itemDetails;
@@ -106,21 +106,21 @@ class Inventory extends Page {
     }
 
     async getInventoryItemNameByNameText(value) {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, value);
         return await this.wdioFactory.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value) {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, value);
         return await this.wdioFactory.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value) {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, value);
         return await this.wdioFactory.click(selector);
     }
 
-    async clickAndGetDetailsFromItemName(value) {
+    async AddItemToCartByName(value) {
         const itemNameText = await this.getInventoryItemNameByNameText(value);
         const itemPriceText = await this.getInventoryItemPriceByNameText(value);
         await this.clickInventoryItemAddToCartByName(value);

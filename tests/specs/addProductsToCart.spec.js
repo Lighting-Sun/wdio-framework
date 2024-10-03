@@ -24,11 +24,37 @@ describe('product pruchase scenarios', () => {
         const inventoryNames = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
         const inventoryPrices = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
         await inventoryPage.header.clickOnShoppingCartBtn();
+        await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
+        await expect(await cartPage.header.getPageTitleText()).toEqual('Your Cart');
         const cartNames = await cartPage.getItemCartNames();
         const cartPrices = await cartPage.getItemCartPrices();
         //TODO might need to add extra logs for reporting.
         await expect(inventoryNames).toEqual(cartNames);
         await expect(inventoryPrices).toEqual(cartPrices);
+    });
+
+    it('Should add and validate a single specific item to cart', async () => {
+        //TODO the test case is completed, reporting logs are missing
+        await loginPage.fillUsername(data.users.validUser.username);
+        await loginPage.fillPassword(data.users.validUser.password);
+        await loginPage.clicklOnLoginBtn();
+        await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
+        await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
+        const result = await inventoryPage.AddItemToCartByName('Sauce Labs Onesie');
+        const inventoryNames = result.itemName;
+        const inventoryPrices = result.itemPrice;
+        console.log(inventoryNames);
+        console.log(inventoryPrices);
+        await inventoryPage.header.clickOnShoppingCartBtn();
+        await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
+        await expect(await cartPage.header.getPageTitleText()).toEqual('Your Cart');
+        const cartNames = await cartPage.getItemCartNames();
+        const cartPrices = await cartPage.getItemCartPrices();
+        //TODO might need to add extra logs for reporting.
+        //Need to add deselection of added products so test scenarios wont get contaminated with past test data
+        await expect(inventoryNames).toEqual(cartNames);
+        await expect(inventoryPrices).toEqual(cartPrices);
+
     });
 
 });
