@@ -9,5 +9,10 @@
             "password":"secret_sauce"
         }
     },
-    "loginErrorMessage":"Epic sadface: Sorry, this user has been locked out."
+    "loginErrorMessage":"Epic sadface: Sorry, this user has been locked out.",
+    "personalInfo": {
+        "firstName": "Tester",
+        "lastName": "SDET",
+        "postalCode": "1223"
+    }
 }
