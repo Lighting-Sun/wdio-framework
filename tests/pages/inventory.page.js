@@ -33,6 +33,18 @@ class Inventory extends Page {
         inventoryItemCard: {
             selector: "div[data-test='inventory-item']",
             description: "inventory item name based on index'",
+        },
+        inventoryItemNameByName: {
+            selector: "//div[text()='${value}']",
+            description: "inventory item name based on ${value}'",
+        },
+        inventoryItemPriceByName: {
+            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//div[@data-test='inventory-item-price']",
+            description: "inventory item price based on ${value}'",
+        },
+        inventoryAddToCartButtonByName: {
+            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//button",
+            description: "inventory item price based on ${value}'",
         }
     };
 
@@ -51,11 +63,11 @@ class Inventory extends Page {
         return trimmedPrice;
     }
 
-    async getInventoryPriceFromIndex(index) {
+    async getInventoryPriceFromIndexText(index) {
         return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceIndex, index));
     }
 
-    async getInventoryNameFromIndex(index) {
+    async getInventoryNameFromIndexText(index) {
         return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameIndex, index));
     }
 
@@ -64,8 +76,8 @@ class Inventory extends Page {
     }
 
     async clickAndGetDetailsFromItemIndex(index) {
-        const itemNameText = await this.getInventoryNameFromIndex(index);
-        const itemPriceText = await this.getInventoryPriceFromIndex(index);
+        const itemNameText = await this.getInventoryNameFromIndexText(index);
+        const itemPriceText = await this.getInventoryPriceFromIndexText(index);
         await this.clickAddCartItemButtonFromIndex(index);
         return {
             itemName: itemNameText,
