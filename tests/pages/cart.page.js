@@ -14,6 +14,10 @@ class CartPage extends Page {
         itemCartPrices: {
             selector: "div[data-test='inventory-item-price']",
             description: "item prices in cart",
+        },
+        itemCartRemoveButton: {
+            selector: "button[data-test^='remove']",
+            description: "item remove from cart button"
         }
     };
 
@@ -27,6 +31,13 @@ class CartPage extends Page {
         return await this.wdioFactory.getTextFromElements(itemCartPrices);
     }
 
+    async removeAllItemsFromCart() {
+        await this.wdioFactory.clickAllIfExists(this.locators.itemCartRemoveButton);
+        await browser.waitUntil(async () => {
+            const elementCount = (await this.wdioFactory.getElements(this.locators.itemCartRemoveButton)).length;
+            return elementCount === 0;
+        }, { timeoutMsg: `💥 ${this.locators.itemCartRemoveButton.description} was found!, none should be existent` });
+    }
 }
 
 export default new CartPage();
