@@ -45,6 +45,10 @@ class OverviewPage extends Page {
         return Number(subTotalText);
     }
 
+    async clickOnFinishButton() {
+        await this.wdioFactory.click(finishButton);
+    }
+
 }
 
 export default new OverviewPage();
