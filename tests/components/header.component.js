@@ -39,6 +39,10 @@ class Header extends BaseComponent {
         await this.wdioFactoryUtils.click(this.locators.sortFilterDropdown);
         await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', strValue);
     }
+
+    async clickOnShoppingCartBtn() {
+        await this.wdioFactoryUtils.click(this.locators.shoppingCartBtn);
+    }
 }
 
 export default Header;
