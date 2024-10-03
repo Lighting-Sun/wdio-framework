@@ -104,5 +104,20 @@ class Inventory extends Page {
     async getProperyValuesFromArrayOfDetails(arrOfItemDetail, strPropertyToGet) {
         return await arrOfItemDetail.map(detail => detail[strPropertyToGet]);
     }
+
+    async getInventoryItemNameByNameText(value) {
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName);
+        return await this.wdioFactory.getText(selector);
+    }
+
+    async getInventoryItemPriceByNameText(value) {
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName);
+        return await this.wdioFactory.getText(selector);
+    }
+
+    async clickInventoryItemAddToCartByName(value) {
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName);
+        return await this.wdioFactory.click(selector);
+    }
 }
 export default new Inventory();
