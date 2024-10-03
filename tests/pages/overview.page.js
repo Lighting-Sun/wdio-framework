@@ -1,6 +1,10 @@
+import Header from '../components/header.component.js';
 import Page from './page.js';
 
 class OverviewPage extends Page {
+
+    header = new Header();
+
     locators = {
         finishButton: {
             selector: "#finish",
