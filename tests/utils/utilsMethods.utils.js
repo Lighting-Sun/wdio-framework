@@ -22,9 +22,8 @@ class UtilsMethods {
     }
 
     static async sumArrAndFixPresicion(arrNum, numPresicion) {
-        const reducedArr = arrNum.reduce((acum, actual) => acum + actual);
-        const sum = await reducedArr.toFixed(numPresicion);
-        return Number(sum);
+        const reducedArr = await arrNum.reduce((acum, actual) => acum + actual);
+        return Number(await reducedArr.toFixed(numPresicion));
     }
 }
 
