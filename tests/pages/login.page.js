@@ -46,6 +46,12 @@ class LoginPage extends Page {
     async getLoginLogoText() {
         return await this.wdioFactory.getText(this.locators.loginLogo);
     }
+
+    async loginWithCredentials(srtUserName, strPassword) {
+        await this.fillUsername(srtUserName);
+        await this.fillPassword(strPassword);
+        await this.clicklOnLoginBtn();
+    }
 }
 
 export default new LoginPage();
