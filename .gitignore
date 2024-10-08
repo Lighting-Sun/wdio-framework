@@ -2,3 +2,4 @@ node_modules
 tmp
 tests/visual-testing
 allure-results
+allure-report
