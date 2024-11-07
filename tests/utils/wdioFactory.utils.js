@@ -1,4 +1,4 @@
-
+import allureReporter from "@wdio/allure-reporter";
 
 export default class WdioFactoryUtils {
 
@@ -7,11 +7,21 @@ export default class WdioFactoryUtils {
         const elementDescription = objElement.description;
         await elementSelector.waitForClickable({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
         await elementSelector.click();
+        allureReporter.addAttachment(
+            `🥾 ${objElement.description} is clicked`,
+            `🥾 ${objElement.selector} is clicked`,
+            "text/plain"
+        );
     }
 
     async getSelectorByValue(objElement, strValue) {
         const elementSelector = await objElement.selector.replace('${value}', strValue);
         const elementDescription = await objElement.description.replace('${value}', strValue);
+        allureReporter.addAttachment(
+            `🥾 getting element dynamic selector with value ${elementDescription} `,
+            `🥾 getting element dynamic selector ${elementSelector}`,
+            "text/plain"
+        );
         return {
             selector: elementSelector,
             description: elementDescription,
@@ -24,12 +34,22 @@ export default class WdioFactoryUtils {
         await elementSelector.waitForEnabled({ timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.` });
         await this.click(objElement);
         await elementSelector.setValue(strValueToSend);
+        allureReporter.addAttachment(
+            `🥾 setting value for element ${objElement.description} with value: ${strValueToSend}`,
+            `🥾 setting value for element ${objElement.selector}`,
+            "text/plain"
+        );
     }
 
     async getText(objElement) {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
+        allureReporter.addAttachment(
+            `🥾 Got text from ${objElement.description}`,
+            `🥾 Got text from ${objElement.selector}`,
+            "text/plain"
+        );
         return await elementSelector.getText();
     }
 
@@ -50,6 +70,11 @@ export default class WdioFactoryUtils {
         const elementDescription = objElement.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
         await elementSelector.selectByAttribute(strAttr, srtValue);
+        allureReporter.addAttachment(
+            `🥾 Select ${objElement.description} with option ${srtValue} was clicked`,
+            `🥾 Element from select ${objElement.selector} was clicked`,
+            "text/plain"
+        );
     }
 
     async clickAllIfExists(objElement) {
@@ -61,6 +86,11 @@ export default class WdioFactoryUtils {
             element = await $(objElement.selector);
             isClickable = await element.waitForClickable({ timeout: 1000 }).catch(() => false);
         }
+        allureReporter.addAttachment(
+            `🥾 all elements ${objElement.description} were clicked`,
+            `🥾 all elements ${objElement.selector} were clicked`,
+            "text/plain"
+        );
         console.log("📢 There are no more elements to be clicked!");
     }
 }
