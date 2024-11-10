@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "npx wdio",
-    "wdio": "wdio run ./wdio.conf.js"
+    "wdio": "wdio run ./wdio.conf.js",
+    "allure-report": "allure generate --clean ./reports/allure/allure-results -o ./reports/allure/allure-report && allure open"
   },
   "author": "Harvey Cortes",
   "license": "ISC",
@@ -15,6 +16,7 @@
     "@wdio/local-runner": "^9.0.9",
     "@wdio/mocha-framework": "^9.0.8",
     "@wdio/spec-reporter": "^9.1.2",
-    "@wdio/visual-service": "^6.0.0"
+    "@wdio/visual-service": "^6.0.0",
+    "allure-commandline": "^2.32.0"
   }
 }

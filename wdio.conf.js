@@ -1,4 +1,9 @@
 import path from "node:path";
+import allure from "allure-commandline";
+import fs from 'fs';
+
+let allureDir = "./reports/allure";
+
 export const config = {
     //
     // ====================
@@ -138,7 +143,11 @@ export const config = {
     // Test reporter for stdout.
     // The only one supported by default is 'dot'
     // see also: https://webdriver.io/docs/dot-reporter
-    reporters: ['spec'],
+    reporters: ['spec', ['allure', {
+        outputDir: allureDir + '/allure-results',
+        disableWebdriverStepsReporting: true,
+        disableWebdriverScreenshotsReporting: true,
+    }]],
 
     // Options to be passed to Mocha.
     // See the full list at http://mochajs.org/
@@ -212,8 +221,24 @@ export const config = {
      * Hook that gets executed before the suite starts
      * @param {object} suite suite details
      */
-    // beforeSuite: function (suite) {
-    // },
+    beforeSuite: function (suite) {
+
+        let dir = allureDir + 'allure-results';
+
+        try {
+            if (fs.existsSync(dir)) {
+                fs.rmSync(dir, { recursive: true });
+            }
+            console.log(`${dir} is deleted`);
+        } catch (error) {
+            console.log("error while deleting this dir");
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+                console.log("dir got created");
+            }
+        }
+
+    },
     /**
      * Function to be executed before a test (in Mocha/Jasmine) starts.
      */
@@ -241,8 +266,11 @@ export const config = {
      * @param {boolean} result.passed    true if test has passed, otherwise false
      * @param {object}  result.retries   information about spec related retries, e.g. `{ attempts: 0, limit: 0 }`
      */
-    // afterTest: function(test, context, { error, result, duration, passed, retries }) {
-    // },
+    afterTest: async function (test, context, { error, result, duration, passed, retries }) {
+        if (!passed) {
+            await browser.takeScreenshot();
+        }
+    },
 
 
     /**
@@ -285,8 +313,26 @@ export const config = {
      * @param {Array.<Object>} capabilities list of capabilities details
      * @param {<Object>} results object containing test results
      */
-    // onComplete: function(exitCode, config, capabilities, results) {
-    // },
+    onComplete: function () {
+        const reportError = new Error('Could not generate Allure report');
+        const generation = allure(['generate', allureDir + '/allure-results', '--clean', '-o', allureDir + '/allure-report']);
+        return new Promise((resolve, reject) => {
+            const generationTimeout = setTimeout(
+                () => reject(reportError),
+                5000);
+
+            generation.on('exit', function (exitCode) {
+                clearTimeout(generationTimeout);
+
+                if (exitCode !== 0) {
+                    return reject(reportError);
+                }
+
+                console.log('Allure report successfully generated');
+                resolve();
+            });
+        });
+    },
     /**
     * Gets executed when a refresh happens.
     * @param {string} oldSessionId session ID of the old session
