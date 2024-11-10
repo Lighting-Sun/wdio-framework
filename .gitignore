@@ -3,3 +3,4 @@ tmp
 tests/visual-testing
 allure-results
 allure-report
+reports
