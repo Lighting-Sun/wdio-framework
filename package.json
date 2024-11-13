@@ -6,7 +6,8 @@
   "scripts": {
     "test": "npx wdio",
     "wdio": "wdio run ./wdio.conf.js",
-    "allure-report": "allure generate --clean ./reports/allure/allure-results -o ./reports/allure/allure-report && allure open"
+    "generate-allure-report": "allure generate --clean ./reports/allure/allure-results -o ./reports/allure/allure-report && allure open ./reports/allure/allure-report",
+    "open-allure":"allure open ./reports/allure/allure-report"
   },
   "author": "Harvey Cortes",
   "license": "ISC",

@@ -45,12 +45,13 @@ export default class WdioFactoryUtils {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
+        const textFromElement = await elementSelector.getText();
         allureReporter.addAttachment(
-            `🥾 Got text from ${objElement.description}`,
+            `🥾 Got text from ${objElement.description} with value: ${textFromElement}`,
             `🥾 Got text from ${objElement.selector}`,
             "text/plain"
         );
-        return await elementSelector.getText();
+        return textFromElement;
     }
 
     async getElements(objElements) {

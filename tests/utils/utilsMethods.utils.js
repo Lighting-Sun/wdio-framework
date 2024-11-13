@@ -25,6 +25,10 @@ class UtilsMethods {
         const reducedArr = await arrNum.reduce((acum, actual) => acum + actual);
         return Number(await reducedArr.toFixed(numPresicion));
     }
+
+    static async fixNumberPresicion(number, numPresicion) {
+        return Number(await number.toFixed(numPresicion));
+    }
 }
 
 export default UtilsMethods;
