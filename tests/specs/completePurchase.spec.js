@@ -17,7 +17,6 @@ describe('complete purchase scenarios', () => {
     //reading the datafile
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
     it('Should do a successful purchase', async () => {
-        //TODO the test case is completed, reporting logs are missing
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
@@ -29,7 +28,6 @@ describe('complete purchase scenarios', () => {
         await expect(await cartPage.header.getPageTitleText()).toEqual('Your Cart');
         const cartNames = await cartPage.getItemCartNames();
         const cartPrices = await cartPage.getItemCartPrices();
-        //TODO might need to add extra logs for reporting.
         await expect(inventoryNames).toEqual(cartNames);
         await expect(inventoryPrices).toEqual(cartPrices);
         await cartPage.clickOnCheckoutButton();
@@ -44,7 +42,7 @@ describe('complete purchase scenarios', () => {
         await expect(overviewNames).toEqual(cartNames);
         await expect(overviewPrices).toEqual(cartPrices);
         const overviewSumPrices = await UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
-        const overviewSubTotalPrice = await overviewPage.getSubTotalValue();
+        const overviewSubTotalPrice = await UtilsMethods.fixNumberPresicion(await overviewPage.getSubTotalValue(), 2);
         await expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
         await overviewPage.clickOnFinishButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'));

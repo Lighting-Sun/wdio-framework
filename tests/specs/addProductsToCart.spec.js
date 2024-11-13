@@ -14,7 +14,6 @@ describe('product pruchase scenarios', () => {
     //reading the datafile
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
     it('Should add and validate multiple items added to cart', async () => {
-        //TODO the test case is completed, reporting logs are missing
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
@@ -26,14 +25,12 @@ describe('product pruchase scenarios', () => {
         await expect(await cartPage.header.getPageTitleText()).toEqual('Your Cart');
         const cartNames = await cartPage.getItemCartNames();
         const cartPrices = await cartPage.getItemCartPrices();
-        //TODO might need to add extra logs for reporting.
         await expect(inventoryNames).toEqual(cartNames);
         await expect(inventoryPrices).toEqual(cartPrices);
         await cartPage.removeAllItemsFromCart();
     });
 
     it('Should add and validate a single specific item to cart', async () => {
-        //TODO the test case is completed, reporting logs are missing
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
@@ -45,7 +42,6 @@ describe('product pruchase scenarios', () => {
         await expect(await cartPage.header.getPageTitleText()).toEqual('Your Cart');
         const cartNames = await cartPage.getItemCartNames();
         const cartPrices = await cartPage.getItemCartPrices();
-        //TODO might need to add extra logs for reporting.
         await expect([inventoryNames]).toEqual(cartNames);
         await expect([inventoryPrices]).toEqual(cartPrices);
         await cartPage.removeAllItemsFromCart();
