@@ -1,8 +1,18 @@
 import path from "node:path";
 import allure from "allure-commandline";
 import fs from 'fs';
+import yargs from "yargs";
+const { argv } = yargs(process.argv);
 
 let allureDir = "./reports/allure";
+
+const envs = argv.env;
+const environments = {
+    qa: 'https://www.saucedemo.com/',
+    dev: 'https://www.saucedemo.com/v1/',
+};
+
+const baseUrl = environments[envs];
 
 export const config = {
     //
@@ -50,6 +60,7 @@ export const config = {
     // from the same test should run tests.
     //
     maxInstances: 10,
+    baseUrl,
     //
     // If you have trouble getting all important capabilities together, check out the
     // Sauce Labs platform configurator - a great tool to configure your capabilities:
@@ -59,7 +70,6 @@ export const config = {
         // capabilities for local browser web tests
         browserName: 'chrome' // or "firefox", "microsoftedge", "safari"
     }],
-
     //
     // ===================
     // Test Configurations

@@ -26,7 +26,8 @@ class LoginPage extends Page {
     };
 
     async openPage() {
-        await this.open('https://www.saucedemo.com/');
+        console.log(browser.options.baseUrl);
+        await this.open(browser.options.baseUrl);
     }
 
     async fillUsername(username) {
