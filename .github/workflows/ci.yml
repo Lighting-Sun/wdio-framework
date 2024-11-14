@@ -1,12 +1,30 @@
 name: CI
 
-on: 
+on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   runTest:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.17.0"
+          cache: "npm"
+      - name: Install
+        run: npm ci --no-fund --no-audit
+      - name: Test
+        run: npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: ./reports/allure/allure-report

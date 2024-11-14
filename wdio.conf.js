@@ -12,7 +12,7 @@ const environments = {
     dev: 'https://www.saucedemo.com/v1/',
 };
 
-const baseUrl = environments[envs];
+const baseUrl = environments[envs] || environments.qa;
 
 export const config = {
     //
@@ -68,7 +68,10 @@ export const config = {
     //
     capabilities: [{
         // capabilities for local browser web tests
-        browserName: 'chrome' // or "firefox", "microsoftedge", "safari"
+        browserName: 'chrome',
+        'goog:chromeOptions': {
+            args: ['headless', 'disable-gpu']
+        } // or "firefox", "microsoftedge", "safari"
     }],
     //
     // ===================

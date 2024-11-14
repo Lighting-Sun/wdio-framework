@@ -26,7 +26,6 @@ class LoginPage extends Page {
     };
 
     async openPage() {
-        console.log(browser.options.baseUrl);
         await this.open(browser.options.baseUrl);
     }
 
