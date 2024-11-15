@@ -95,7 +95,7 @@ class Inventory extends Page {
         const indexesToAdd = await UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
 
         for await (const index of indexesToAdd) {
-            detailsPromises.push(this.AddItemToCartByIndex(index));
+            detailsPromises.push(await this.AddItemToCartByIndex(index));
         }
         const itemDetails = await Promise.all(detailsPromises);
         return itemDetails;

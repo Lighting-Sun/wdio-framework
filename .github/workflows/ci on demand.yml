@@ -1,0 +1,28 @@
+name: CI on demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "select where to run"
+        required: true
+        default: "qa"
+        type: choice
+        options:
+          - qa
+          - dev
+      artifacts:
+        description: "Allure report"
+        required: false
+        type: boolean
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runTest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
