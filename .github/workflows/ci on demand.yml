@@ -3,8 +3,8 @@ name: CI on demand
 on:
   workflow_dispatch:
     inputs:
-      platform:
-        description: "select where to run"
+      environment:
+        description: "select environment to run"
         required: true
         default: "qa"
         type: choice
@@ -26,3 +26,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.17.0"
+          cache: "npm"
+      - name: Install
+        run: npm ci --no-fund --no-audit
+      - name: Test
+        run: npx wdio --env ${{ github.event.inputs.environment }}
+      - if: github.event.inputs.artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: ./reports/allure/allure-report
