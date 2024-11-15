@@ -31,6 +31,7 @@ const browserCap = {
 };
 
 const selectedBrowserCap = browserCap[runInBrowser] || browserCap.chrome;
+const baseUrl = environments[envs] || environments.qa;
 
 export const config = {
     //
