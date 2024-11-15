@@ -11,8 +11,26 @@ const environments = {
     qa: 'https://www.saucedemo.com/',
     dev: 'https://www.saucedemo.com/v1/',
 };
-
 const baseUrl = environments[envs] || environments.qa;
+
+const runInBrowser = argv.browser;
+const browserCap = {
+    // capabilities for local browser web tests
+    chrome: {
+        browserName: 'chrome',
+        'goog:chromeOptions': {
+            args: ['headless', 'disable-gpu']
+        }
+    },
+    firefox: {
+        browserName: 'firefox',
+        'moz:firefoxOptions': {
+            args: ['-headless']
+        }
+    } // or "firefox", "microsoftedge", "safari"
+};
+
+const selectedBrowserCap = browserCap[runInBrowser] || browserCap.chrome;
 
 export const config = {
     //
@@ -66,13 +84,7 @@ export const config = {
     // Sauce Labs platform configurator - a great tool to configure your capabilities:
     // https://saucelabs.com/platform/platform-configurator
     //
-    capabilities: [{
-        // capabilities for local browser web tests
-        browserName: 'chrome',
-        'goog:chromeOptions': {
-            args: ['headless', 'disable-gpu']
-        } // or "firefox", "microsoftedge", "safari"
-    }],
+    capabilities: [selectedBrowserCap],
     //
     // ===================
     // Test Configurations

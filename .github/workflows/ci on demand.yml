@@ -11,6 +11,14 @@ on:
         options:
           - qa
           - dev
+      browser:
+        description: "select browser to run"
+        required: true
+        default: "chrome"
+        type: choice
+        options:
+          - chrome
+          - firefox
       artifacts:
         description: "Allure report"
         required: false
@@ -33,7 +41,7 @@ jobs:
       - name: Install
         run: npm ci --no-fund --no-audit
       - name: Test
-        run: npx wdio --env ${{ github.event.inputs.environment }}
+        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }}
       - if: github.event.inputs.artifacts == 'true'
         uses: actions/upload-artifact@v4
         with:
