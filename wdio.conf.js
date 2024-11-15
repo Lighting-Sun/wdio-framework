@@ -339,12 +339,13 @@ export const config = {
      * @param {<Object>} results object containing test results
      */
     onComplete: function () {
+        const timeOutTimer = 60_000;
         const reportError = new Error('Could not generate Allure report');
         const generation = allure(['generate', allureDir + '/allure-results', '--clean', '-o', allureDir + '/allure-report']);
         return new Promise((resolve, reject) => {
             const generationTimeout = setTimeout(
                 () => reject(reportError),
-                5000);
+                timeOutTimer);
 
             generation.on('exit', function (exitCode) {
                 clearTimeout(generationTimeout);
