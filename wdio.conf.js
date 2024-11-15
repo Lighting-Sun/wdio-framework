@@ -12,7 +12,6 @@ const environments = {
     dev: 'https://www.saucedemo.com/v1/',
 };
 
-
 const baseUrl = environments[envs] || environments.qa;
 
 export const config = {
