@@ -23,7 +23,7 @@ jobs:
       - name: Install
         run: npm ci --no-fund --no-audit
       - name: Test
-        run: npm test
+        run: npx wdio --env dev
       - uses: actions/upload-artifact@v4
         with:
           name: allure-report
