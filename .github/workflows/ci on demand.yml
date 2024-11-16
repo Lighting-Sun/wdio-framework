@@ -6,7 +6,7 @@ on:
       environment:
         description: "select environment to run"
         required: true
-        default: "qa"
+        default: qa
         type: choice
         options:
           - qa
@@ -14,11 +14,18 @@ on:
       browser:
         description: "select browser to run"
         required: true
-        default: "chrome"
+        default: chrome
         type: choice
         options:
           - chrome
           - firefox
+      suite:
+        description: "select suite to run"
+        required: false
+        type: choice
+        options:
+          - regression
+          - smoke
       artifacts:
         description: "Allure report"
         required: false
@@ -40,11 +47,14 @@ jobs:
           cache: "npm"
       - name: Install
         run: npm ci --no-fund --no-audit
-      - name: Test
+      - if: ${{ github.event.inputs.suite}}
+        name: Test
+        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --suite ${{ github.event.inputs.suite || 'regression' }}
+      - if: ${{! github.event.inputs.suite}}
+        name: Test
         run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }}
       - if: github.event.inputs.artifacts == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: ./reports/allure/allure-report
-          

@@ -57,6 +57,18 @@ export const config = {
     specs: [
         './tests/specs/**/*.js'
     ],
+    suites: {
+        regression: [
+            './tests/specs/addProductsToCart.spec.js',
+            './tests/specs/completePurchase.spec.js',
+            './tests/specs/filter.spec.js',
+            './tests/specs/login.spec.js'
+        ],
+        smoke: [
+            './tests/specs/login.spec.js',
+            './tests/specs/completePurchase.spec.js'
+        ]
+    },
     // Patterns to exclude.
     exclude: [
         // 'path/to/excluded/files'
