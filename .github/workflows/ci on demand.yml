@@ -20,7 +20,7 @@ on:
           - chrome
           - firefox
       suite:
-        description: "select suite to run (resgression will run if no choice is selected)"
+        description: "select suite to run"
         required: false
         type: choice
         options:
