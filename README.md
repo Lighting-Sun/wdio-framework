@@ -15,4 +15,4 @@
 7. In Edit environment variable click New button and paste the path that contains jdk, then click Ok.
 8. Close the open windows and that's it, you have JDK installed and windows will know where to find it.
 
-🚧 READ ME UNDER CONSTRUCTION 🚧
+🚧 README UNDER CONSTRUCTION 🚧
