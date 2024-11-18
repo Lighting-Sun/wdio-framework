@@ -30,7 +30,7 @@ describe('product pruchase scenarios', () => {
         await cartPage.removeAllItemsFromCart();
     });
 
-    it('Should add and validate a single specific item to cart', async () => {
+    it('Should add and validate a single specific item to cart @smoke', async () => {
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');

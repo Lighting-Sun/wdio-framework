@@ -64,7 +64,7 @@ export const config = {
             './tests/specs/filter.spec.js',
             './tests/specs/login.spec.js'
         ],
-        smoke: [
+        loginAndPurchase: [
             './tests/specs/login.spec.js',
             './tests/specs/completePurchase.spec.js'
         ]
@@ -260,7 +260,7 @@ export const config = {
      */
     beforeSuite: function (suite) {
 
-        let dir = allureDir + 'allure-results';
+        let dir = allureDir + '/allure-results';
 
         try {
             if (fs.existsSync(dir)) {
