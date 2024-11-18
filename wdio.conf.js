@@ -265,13 +265,13 @@ export const config = {
         try {
             if (fs.existsSync(dir)) {
                 fs.rmSync(dir, { recursive: true });
+                console.log(`🗑 ${dir} is deleted`);
             }
-            console.log(`${dir} is deleted`);
         } catch (error) {
-            console.log("error while deleting this dir");
+            console.log("❌ error while deleting this dir");
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.log("dir got created");
+                console.log("✔ dir got created");
             }
         }
 
