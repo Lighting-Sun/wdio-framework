@@ -40,7 +40,7 @@ Installed:
 2. Once you have installed Visual Studio Code you need to install a couple of plugins to help you set up the framework.
 These plugins are Prettier and ESlint
 
-##### Installing Prettier in VS code
+#### Installing Prettier in VS code
 1. Go to Visual Studio Code application.
 2. On left sidebar in Visual Studio Code, click Extensions or press Crtl+Shift+X.
 3. In the search, type Prettier and click Prettier - Code formatter, then click on install.
@@ -65,6 +65,16 @@ These plugins are Prettier and ESlint
 
 1. Right click on the folder and open it with Visual Studio Code
 
+![OpenProject](https://github.com/user-attachments/assets/c12cbda0-4f60-42c8-b608-55b0576d921c)
 
+## Running the project
 
-🚧 README UNDER CONSTRUCTION 🚧
+1. In Visual Studio Code, open new terminal with `Ctrl+Shift+` or `Ctrl+Shift+ñ` or on top bar click Terminal, then click New Terminal
+
+![OpenTerminal](https://github.com/user-attachments/assets/89bb47e9-636e-4004-82d9-ce3ba86cf81e)
+
+2. Type `npm install` and wait all packages will be downloaded
+
+* To Run All test cases type `npx wdio`
+* To run in a specific browser apppend the browser name **chrome** and **firefox** are the only valid options `npx wdio --browser firefox`
+* To run a specific suite append the suite name **regression** and **loginAndPurchase** are the valid options `npx wdio --suite regression`
