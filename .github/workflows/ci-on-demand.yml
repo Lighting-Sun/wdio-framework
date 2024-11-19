@@ -26,6 +26,7 @@ on:
         options:
           - regression
           - loginAndPurchase
+          - loginAndPurchase
           - smoke
       artifacts:
         description: "Allure report"
