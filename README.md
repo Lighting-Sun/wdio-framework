@@ -113,7 +113,7 @@ These plugins are Prettier and ESlint
 3. Extract the .zip file with the Extract here option
 4. Place the project folder on the desired location
 
-#### Open project
+#### Open and run project
 
 1. Right click on the folder and open it with Visual Studio Code
 
@@ -138,4 +138,13 @@ These plugins are Prettier and ESlint
   npx wdio --suite regression
   ```
 
+#### Open allure report
 
+1. After the excecution, make sure to check that there's a reports folder containing both allure results and report
+![image](https://github.com/user-attachments/assets/982cd954-e0ba-45c1-b449-3b3580602f16)
+2. Type the following command to open the report
+  ```
+  npm run open-allure 
+  ```
+3. The report should open and you should be able to check it out!
+![image](https://github.com/user-attachments/assets/4c432e46-62de-4d6a-8790-51cd799217c9)
