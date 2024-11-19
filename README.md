@@ -1,7 +1,7 @@
 # UI WebdriverIO Automation practice framework
 
-## Tutorial on how to run from github actions
-
+## Tutorial on how to run from github actions [you need at least read permissions in the repository for this]
+Please kindly ask the owner for access in case you want to try this out!
 ### Custom run using the project using github actions
 
 You can run this repository without downloading it 
