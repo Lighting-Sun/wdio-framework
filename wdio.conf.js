@@ -64,7 +64,7 @@ export const config = {
             './tests/specs/filter.spec.js',
             './tests/specs/login.spec.js'
         ],
-        smoke: [
+        loginAndPurchase: [
             './tests/specs/login.spec.js',
             './tests/specs/completePurchase.spec.js'
         ]
@@ -208,6 +208,25 @@ export const config = {
      */
     // onPrepare: function (config, capabilities) {
     // },
+
+    onPrepare: function (config) {
+
+        let dir = allureDir;
+
+        try {
+            if (fs.existsSync(dir)) {
+                fs.rmSync(dir, { recursive: true });
+                console.log(`🗑 ${dir} is deleted`);
+            }
+        } catch (error) {
+            console.log("⚠ error while deleting this dir");
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+                console.log("✔ dir got created");
+            }
+        }
+
+    },
     /**
      * Gets executed before a worker process is spawned and can be used to initialize specific service
      * for that worker as well as modify runtime environments in an async fashion.
@@ -258,24 +277,8 @@ export const config = {
      * Hook that gets executed before the suite starts
      * @param {object} suite suite details
      */
-    beforeSuite: function (suite) {
-
-        let dir = allureDir + 'allure-results';
-
-        try {
-            if (fs.existsSync(dir)) {
-                fs.rmSync(dir, { recursive: true });
-            }
-            console.log(`${dir} is deleted`);
-        } catch (error) {
-            console.log("error while deleting this dir");
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-                console.log("dir got created");
-            }
-        }
-
-    },
+    // beforeSuite: function (suite) {
+    //},
     /**
      * Function to be executed before a test (in Mocha/Jasmine) starts.
      */

@@ -11,7 +11,7 @@ describe('login related scenarios', () => {
     });
     //reading the datafile
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
-    it('Should successfuly log in with a valid user', async () => {
+    it('Should successfuly log in with a valid user @smoke', async () => {
         await loginPage.fillUsername(data.users.validUser.username);
         await loginPage.fillPassword(data.users.validUser.password);
         await loginPage.clicklOnLoginBtn();
@@ -26,7 +26,7 @@ describe('login related scenarios', () => {
         await expect(await loginPage.getLoginErrorMessage()).toEqual(data.loginErrorMessage);
     });
 
-    it('Should logout successfully when already logged in', async () => {
+    it('Should logout successfully when already logged in @smoke', async () => {
         await loginPage.fillUsername(data.users.validUser.username);
         await loginPage.fillPassword(data.users.validUser.password);
         await loginPage.clicklOnLoginBtn();
