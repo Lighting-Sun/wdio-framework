@@ -277,26 +277,8 @@ export const config = {
      * Hook that gets executed before the suite starts
      * @param {object} suite suite details
      */
-    /*
-    beforeSuite: function (suite) {
-
-        let dir = allureDir;
-
-        try {
-            if (fs.existsSync(dir)) {
-                fs.rmSync(dir, { recursive: true });
-                console.log(`🗑 ${dir} is deleted`);
-            }
-        } catch (error) {
-            console.log("⚠ error while deleting this dir");
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-                console.log("✔ dir got created");
-            }
-        }
-
-    },
-    */
+    // beforeSuite: function (suite) {
+    //},
     /**
      * Function to be executed before a test (in Mocha/Jasmine) starts.
      */
