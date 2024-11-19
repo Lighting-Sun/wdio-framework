@@ -260,7 +260,7 @@ export const config = {
      */
     beforeSuite: function (suite) {
 
-        let dir = allureDir + '/allure-results';
+        let dir = allureDir;
 
         try {
             if (fs.existsSync(dir)) {
@@ -268,7 +268,7 @@ export const config = {
                 console.log(`🗑 ${dir} is deleted`);
             }
         } catch (error) {
-            console.log("❌ error while deleting this dir");
+            console.log("⚠ error while deleting this dir");
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
                 console.log("✔ dir got created");
