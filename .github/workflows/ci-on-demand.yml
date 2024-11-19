@@ -48,13 +48,13 @@ jobs:
           cache: "npm"
       - name: Install
         run: npm ci --no-fund --no-audit
-      - if: ${{ github.event.inputs.suite == 'smoke'}}
+      - if: ${{ github.event.inputs.suite }} == 'smoke'
         name: Test
-        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --mochaOpts.grep ${{github.event.inputs.suite}}
-      - if: ${{ github.event.inputs.suite}}
+        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --mochaOpts.grep ${{ github.event.inputs.suite }}
+      - if: ${{ github.event.inputs.suite }}
         name: Test
         run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --suite ${{ github.event.inputs.suite || 'regression' }}
-      - if: ${{! github.event.inputs.suite}}
+      - if: ${{! github.event.inputs.suite }}
         name: Test
         run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }}
       - if: github.event.inputs.artifacts == 'true'
