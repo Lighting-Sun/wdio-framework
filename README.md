@@ -125,15 +125,6 @@ These plugins are Prettier and ESlint
 
 3. Type `npm install` and wait all packages will be downloaded
 
-4. create a .env file inside the root project folder (Make sure to ask the owner for the values)
-```
-USEREMAIL=
-USERPASSWORD=
-SLACK_WEBHOOK_URL=
-BROWSERSTACK_USERNAME = 
-BROWSERSTACK_ACCESS_KEY =
-```
-
 * To Run All test cases type
   ```
   npx wdio
