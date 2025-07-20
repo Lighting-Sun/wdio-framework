@@ -19,7 +19,12 @@ const browserCap = {
     chrome: {
         browserName: 'chrome',
         'goog:chromeOptions': {
-            args: ['headless', 'disable-gpu']
+            args: [
+                'headless',
+                'disable-gpu'],
+            prefs: {
+                "profile.password_manager_leak_detection": false,
+            },
         }
     },
     firefox: {
