@@ -1,7 +1,6 @@
 import Header from '../components/header.component.js';
 import Page from './page.js';
 
-
 class CartPage extends Page {
 
     header = new Header();
@@ -25,17 +24,15 @@ class CartPage extends Page {
         }
     };
 
-    async getItemCartNames() {
-        const itemCartNames = await this.wdioFactory.getElements(this.locators.itemCartNames);
-        return await this.wdioFactory.getTextFromElements(itemCartNames);
+    async getItemCartNames(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.itemCartNames);
     }
 
-    async getItemCartPrices() {
-        const itemCartPrices = await this.wdioFactory.getElements(this.locators.itemCartPrices);
-        return await this.wdioFactory.getTextFromElements(itemCartPrices);
+    async getItemCartPrices(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.itemCartPrices);
     }
 
-    async removeAllItemsFromCart() {
+    async removeAllItemsFromCart(): Promise<void> {
         await this.wdioFactory.clickAllIfExists(this.locators.itemCartRemoveButton);
         await browser.waitUntil(async () => {
             const elementCount = (await this.wdioFactory.getElements(this.locators.itemCartRemoveButton)).length;
@@ -43,7 +40,7 @@ class CartPage extends Page {
         }, { timeoutMsg: `💥 ${this.locators.itemCartRemoveButton.description} was found!, none should be existent` });
     }
 
-    async clickOnCheckoutButton() {
+    async clickOnCheckoutButton(): Promise<void> {
         await this.wdioFactory.click(this.locators.checkoutButton);
     }
 }

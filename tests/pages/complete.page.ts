@@ -12,8 +12,9 @@ class CompletePage extends Page {
         },
     };
 
-    async getCompletePurchaseText() {
+    async getCompletePurchaseText(): Promise<string> {
         return this.wdioFactory.getText(this.locators.completePurchaseHeader);
     }
 }
-export default new CompletePage;
+
+export default new CompletePage();

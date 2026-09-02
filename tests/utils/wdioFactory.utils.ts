@@ -1,8 +1,13 @@
 import allureReporter from "@wdio/allure-reporter";
 
+export interface Locator {
+    selector: string;
+    description: string;
+}
+
 export default class WdioFactoryUtils {
 
-    async click(objElement) {
+    async click(objElement: Locator): Promise<void> {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForClickable({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
@@ -14,9 +19,10 @@ export default class WdioFactoryUtils {
         );
     }
 
-    async getSelectorByValue(objElement, strValue) {
-        const elementSelector = await objElement.selector.replace('${value}', strValue);
-        const elementDescription = await objElement.description.replace('${value}', strValue);
+    async getSelectorByValue(objElement: Locator, strValue: string | number): Promise<Locator> {
+        const valueStr = String(strValue);
+        const elementSelector = objElement.selector.replace('${value}', valueStr);
+        const elementDescription = objElement.description.replace('${value}', valueStr);
         allureReporter.addAttachment(
             `🥾 getting element dynamic selector with value ${elementDescription} `,
             `🥾 getting element dynamic selector ${elementSelector}`,
@@ -28,7 +34,7 @@ export default class WdioFactoryUtils {
         };
     }
 
-    async setValue(objElement, strValueToSend) {
+    async setValue(objElement: Locator, strValueToSend: string): Promise<void> {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForEnabled({ timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.` });
@@ -41,7 +47,7 @@ export default class WdioFactoryUtils {
         );
     }
 
-    async getText(objElement) {
+    async getText(objElement: Locator): Promise<string> {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
@@ -54,19 +60,15 @@ export default class WdioFactoryUtils {
         return textFromElement;
     }
 
-    async getElements(objElements) {
-        const elementSelector = await $$(objElements.selector);
-        //might need a wait of some sort...
-        return elementSelector;
+    async getElements(objElements: Locator): Promise<WebdriverIO.Element[]> {
+        return (await $$(objElements.selector)) as unknown as WebdriverIO.Element[];
     }
 
-    async getTextFromElements(webElements) {
-        const elements = await this.getElements(webElements);
-        const elementsText = await Promise.all(await elements.map(async element => await element.getText()));
-        return elementsText;
+    async getTextFromElements(objElements: Locator): Promise<string[]> {
+        return await $$(objElements.selector).map(element => element.getText()) as unknown as Promise<string[]>;
     }
 
-    async selectOptionFromSelect(objElement, strAttr, srtValue) {
+    async selectOptionFromSelect(objElement: Locator, strAttr: string, srtValue: string): Promise<void> {
         const elementSelector = $(objElement.selector);
         const elementDescription = objElement.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
@@ -78,9 +80,9 @@ export default class WdioFactoryUtils {
         );
     }
 
-    async clickAllIfExists(objElement) {
+    async clickAllIfExists(objElement: Locator): Promise<void> {
         let element = await $(objElement.selector);
-        let isClickable = await element.waitForClickable({ timeout: 1000 }).catch(() => false);
+        let isClickable: boolean = await element.waitForClickable({ timeout: 1000 }).catch(() => false);
 
         while (isClickable) {
             await this.click(objElement);

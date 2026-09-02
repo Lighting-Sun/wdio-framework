@@ -24,31 +24,27 @@ class OverviewPage extends Page {
         },
     };
 
-    async getValuesFromPrices() {
+    async getValuesFromPrices(): Promise<number[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);
-        const trimmedPrice = textFromPrices.map(textToTrim => textToTrim.slice(1)).map(Number);
-        return trimmedPrice;
+        return textFromPrices.map(textToTrim => textToTrim.slice(1)).map(Number);
     }
 
-    async getTextFromPrices() {
-        const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);;
-        return textFromPrices;
+    async getTextFromPrices(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);
     }
 
-    async getItemOverviewNames() {
-        const itemCartNames = await this.wdioFactory.getElements(this.locators.overviewItemNames);
-        return await this.wdioFactory.getTextFromElements(itemCartNames);
+    async getItemOverviewNames(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.overviewItemNames);
     }
 
-    async getSubTotalValue() {
+    async getSubTotalValue(): Promise<number> {
         const subTotalText = (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
         return Number(subTotalText);
     }
 
-    async clickOnFinishButton() {
+    async clickOnFinishButton(): Promise<void> {
         await this.wdioFactory.click(this.locators.finishButton);
     }
-
 }
 
 export default new OverviewPage();

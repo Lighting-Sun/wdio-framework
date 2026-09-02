@@ -1,16 +1,15 @@
-import loginPage from "../pages/login.page";
-import inventoryPage from "../pages/inventory.page";
-//this import is used to read files with data, see placeHolderData.js
+import loginPage from "../pages/login.page.js";
+import inventoryPage from "../pages/inventory.page.js";
 import { readFileSync } from "fs";
-
 
 describe('login related scenarios', () => {
 
     beforeEach(async () => {
         await loginPage.openPage();
     });
-    //reading the datafile
+
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
+
     it('Should successfuly log in with a valid user @smoke', async () => {
         await loginPage.fillUsername(data.users.validUser.username);
         await loginPage.fillPassword(data.users.validUser.password);

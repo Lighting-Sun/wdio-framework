@@ -1,6 +1,8 @@
-import Header from '../components/header.component';
-import UtilsMethods from '../utils/utilsMethods.utils';
-import Page from './page';
+import Header from '../components/header.component.js';
+import UtilsMethods from '../utils/utilsMethods.utils.js';
+import Page from './page.js';
+
+type ItemDetail = { itemName: string; itemPrice: string };
 
 class Inventory extends Page {
     header = new Header();
@@ -48,34 +50,29 @@ class Inventory extends Page {
         }
     };
 
-    async clickAddToCartByItemName(strItemName) {
+    async clickAddToCartByItemName(strItemName: string): Promise<void> {
         const element = await this.wdioFactory.getSelectorByValue(this.locators.addToCartButtonBasedOnItemName, strItemName);
         await this.wdioFactory.click(element);
     }
 
-    async clickSelectContainer() {
-        await this.wdioFactory.click(this.locators.sortFilterDropdown);
-    }
-
-    async getTextFromPrices() {
+    async getTextFromPrices(): Promise<string[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
-        const trimmedPrice = textFromPrices.map(textToTrim => textToTrim.slice(1));
-        return trimmedPrice;
+        return textFromPrices.map(textToTrim => textToTrim.slice(1));
     }
 
-    async getInventoryPriceFromIndexText(index) {
+    async getInventoryPriceFromIndexText(index: number): Promise<string> {
         return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceIndex, index));
     }
 
-    async getInventoryNameFromIndexText(index) {
+    async getInventoryNameFromIndexText(index: number): Promise<string> {
         return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameIndex, index));
     }
 
-    async clickAddCartItemButtonFromIndex(index) {
-        return await this.wdioFactory.click(await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddCartItemButtonIndex, index));
+    async clickAddCartItemButtonFromIndex(index: number): Promise<void> {
+        await this.wdioFactory.click(await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddCartItemButtonIndex, index));
     }
 
-    async AddItemToCartByIndex(index) {
+    async AddItemToCartByIndex(index: number): Promise<ItemDetail> {
         const itemNameText = await this.getInventoryNameFromIndexText(index);
         const itemPriceText = await this.getInventoryPriceFromIndexText(index);
         await this.clickAddCartItemButtonFromIndex(index);
@@ -85,42 +82,41 @@ class Inventory extends Page {
         };
     }
 
-    async getNumberOfItems() {
+    async getNumberOfItems(): Promise<number> {
         return (await this.wdioFactory.getElements(this.locators.inventoryItemCard)).length;
     }
 
-    async addRandomItemsToCart() {
-        const detailsPromises = [];
+    async addRandomItemsToCart(): Promise<ItemDetail[]> {
+        const detailsPromises: ItemDetail[] = [];
         const numberOfItems = await this.getNumberOfItems();
-        const indexesToAdd = await UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
+        const indexesToAdd = UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
 
         for await (const index of indexesToAdd) {
             detailsPromises.push(await this.AddItemToCartByIndex(index));
         }
-        const itemDetails = await Promise.all(detailsPromises);
-        return itemDetails;
+        return detailsPromises;
     }
 
-    async getProperyValuesFromArrayOfDetails(arrOfItemDetail, strPropertyToGet) {
-        return await arrOfItemDetail.map(detail => detail[strPropertyToGet]);
+    async getProperyValuesFromArrayOfDetails(arrOfItemDetail: ItemDetail[], strPropertyToGet: keyof ItemDetail): Promise<string[]> {
+        return arrOfItemDetail.map(detail => detail[strPropertyToGet]);
     }
 
-    async getInventoryItemNameByNameText(value) {
+    async getInventoryItemNameByNameText(value: string): Promise<string> {
         const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, value);
         return await this.wdioFactory.getText(selector);
     }
 
-    async getInventoryItemPriceByNameText(value) {
+    async getInventoryItemPriceByNameText(value: string): Promise<string> {
         const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, value);
         return await this.wdioFactory.getText(selector);
     }
 
-    async clickInventoryItemAddToCartByName(value) {
+    async clickInventoryItemAddToCartByName(value: string): Promise<void> {
         const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, value);
-        return await this.wdioFactory.click(selector);
+        await this.wdioFactory.click(selector);
     }
 
-    async AddItemToCartByName(value) {
+    async AddItemToCartByName(value: string): Promise<ItemDetail> {
         const itemNameText = await this.getInventoryItemNameByNameText(value);
         const itemPriceText = await this.getInventoryItemPriceByNameText(value);
         await this.clickInventoryItemAddToCartByName(value);
@@ -130,4 +126,5 @@ class Inventory extends Page {
         };
     }
 }
+
 export default new Inventory();

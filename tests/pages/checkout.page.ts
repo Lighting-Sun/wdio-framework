@@ -24,26 +24,27 @@ class CheckoutPage extends Page {
         },
     };
 
-    async fillFirstName(firstName) {
+    async fillFirstName(firstName: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.firstNameInput, firstName);
     }
 
-    async fillLastName(lastName) {
+    async fillLastName(lastName: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.lastNameInput, lastName);
     }
 
-    async fillPostalCode(postalCode) {
+    async fillPostalCode(postalCode: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.postalCodeInput, postalCode);
     }
 
-    async clickContinueButton() {
+    async clickContinueButton(): Promise<void> {
         await this.wdioFactory.click(this.locators.continueButton);
     }
 
-    async fillPersonalInformationForm(firstName, lastName, postalCode) {
+    async fillPersonalInformationForm(firstName: string, lastName: string, postalCode: string): Promise<void> {
         await this.fillFirstName(firstName);
         await this.fillLastName(lastName);
         await this.fillPostalCode(postalCode);
     }
 }
+
 export default new CheckoutPage();

@@ -1,5 +1,6 @@
-import BaseComponent from "./base.component";
-import SideMenu from "./sidemenu.component";
+import BaseComponent from "./base.component.js";
+import SideMenu from "./sidemenu.component.js";
+
 class Header extends BaseComponent {
 
     sideMenu = new SideMenu();
@@ -27,20 +28,20 @@ class Header extends BaseComponent {
         }
     };
 
-    async getPageTitleText() {
+    async getPageTitleText(): Promise<string> {
         return await this.wdioFactoryUtils.getText(this.locators.pageTitle);
     }
 
-    async clickOnBurgerMenuBtn() {
+    async clickOnBurgerMenuBtn(): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
     }
 
-    async clickOnSortFilterDropdownOption(strValue) {
+    async clickOnSortFilterDropdownOption(strValue: string): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.sortFilterDropdown);
         await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', strValue);
     }
 
-    async clickOnShoppingCartBtn() {
+    async clickOnShoppingCartBtn(): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.shoppingCartBtn);
     }
 }

@@ -1,5 +1,4 @@
-import WdioFactoryUtils from "../utils/wdioFactory.utils";
-
+import WdioFactoryUtils from "../utils/wdioFactory.utils.js";
 
 class BaseComponent {
     wdioFactoryUtils = new WdioFactoryUtils();

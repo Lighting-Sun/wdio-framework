@@ -1,21 +1,20 @@
-import loginPage from "../pages/login.page";
-import inventoryPage from "../pages/inventory.page";
-import cartPage from "../pages/cart.page";
-import checkoutPage from "../pages/checkout.page";
-import overviewPage from "../pages/overview.page";
-import completePage from "../pages/complete.page";
-//this import is used to read files with data, see placeHolderData.js
+import loginPage from "../pages/login.page.js";
+import inventoryPage from "../pages/inventory.page.js";
+import cartPage from "../pages/cart.page.js";
+import checkoutPage from "../pages/checkout.page.js";
+import overviewPage from "../pages/overview.page.js";
+import completePage from "../pages/complete.page.js";
 import { readFileSync } from "fs";
-import UtilsMethods from "../utils/utilsMethods.utils";
-
+import UtilsMethods from "../utils/utilsMethods.utils.js";
 
 describe('complete purchase scenarios', () => {
 
     beforeEach(async () => {
         await loginPage.openPage();
     });
-    //reading the datafile
+
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
+
     it('Should do a successful purchase', async () => {
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
@@ -49,6 +48,4 @@ describe('complete purchase scenarios', () => {
         await expect(await completePage.header.getPageTitleText()).toEqual('Checkout: Complete!');
         await expect(await completePage.getCompletePurchaseText()).toEqual('Thank you for your order!');
     });
-
-
 });

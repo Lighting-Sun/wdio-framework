@@ -25,29 +25,31 @@ class LoginPage extends Page {
         },
     };
 
-    async openPage() {
-        await this.open(browser.options.baseUrl);
+    async openPage(): Promise<void> {
+        await this.open(browser.options.baseUrl as string);
     }
 
-    async fillUsername(username) {
+    async fillUsername(username: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.usernameInput, username);
     }
-    async fillPassword(password) {
+
+    async fillPassword(password: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.passwordInput, password);
     }
-    async clicklOnLoginBtn() {
+
+    async clicklOnLoginBtn(): Promise<void> {
         await this.wdioFactory.click(this.locators.loginButton);
     }
 
-    async getLoginErrorMessage() {
+    async getLoginErrorMessage(): Promise<string> {
         return await this.wdioFactory.getText(this.locators.loginErrorMessage);
     }
 
-    async getLoginLogoText() {
+    async getLoginLogoText(): Promise<string> {
         return await this.wdioFactory.getText(this.locators.loginLogo);
     }
 
-    async loginWithCredentials(srtUserName, strPassword) {
+    async loginWithCredentials(srtUserName: string, strPassword: string): Promise<void> {
         await this.fillUsername(srtUserName);
         await this.fillPassword(strPassword);
         await this.clicklOnLoginBtn();
