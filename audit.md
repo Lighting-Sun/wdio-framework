@@ -17,7 +17,7 @@
 | `2913efd` | Round 1 — findings #1, #3, #4, #6, #7, #8 |
 | `0df9a27` | Progress tracking added to this document |
 | `e330547` | Round 2 — finding #13 |
-| _pending_ | Round 2 — findings #11, #10, #15 |
+| 500cb94 | Round 2 — findings #11, #10, #15 |
 
 **Fixed — 10 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #13, and #15.
 
