@@ -1,7 +1,11 @@
 class UtilsMethods {
 
+    /**
+     * Returns a sorted COPY. `Array.prototype.sort` sorts in place, so sorting
+     * the argument directly would silently reorder the caller's array.
+     */
     static sortLowToHighValues(arrValues: string[]): string[] {
-        return arrValues.sort((a, b) => Number(a) - Number(b));
+        return [...arrValues].sort((a, b) => Number(a) - Number(b));
     }
 
     /**
@@ -15,12 +19,16 @@ class UtilsMethods {
         return strProductName.trim().toLowerCase().replace(/\s+/g, '-');
     }
 
-    static async sumArrAndFixPresicion(arrNum: number[], numPresicion: number): Promise<number> {
-        const reducedArr = arrNum.reduce((acum, actual) => acum + actual);
+    /**
+     * The initial value matters: `reduce` with no initial value throws
+     * "Reduce of empty array with no initial value" on an empty cart.
+     */
+    static sumArrAndFixPresicion(arrNum: number[], numPresicion: number): number {
+        const reducedArr = arrNum.reduce((acum, actual) => acum + actual, 0);
         return Number(reducedArr.toFixed(numPresicion));
     }
 
-    static async fixNumberPresicion(number: number, numPresicion: number): Promise<number> {
+    static fixNumberPresicion(number: number, numPresicion: number): number {
         return Number(number.toFixed(numPresicion));
     }
 }

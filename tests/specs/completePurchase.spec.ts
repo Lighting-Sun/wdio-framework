@@ -20,8 +20,8 @@ describe('complete purchase scenarios', () => {
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await inventoryPage.header.expectPageTitle('Products');
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
-        const inventoryNames = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
-        const inventoryPrices = await inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
+        const inventoryNames = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
+        const inventoryPrices = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
         await inventoryPage.header.clickOnShoppingCartBtn();
         await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
         await cartPage.header.expectPageTitle('Your Cart');
@@ -36,8 +36,8 @@ describe('complete purchase scenarios', () => {
         await overviewPage.header.expectPageTitle('Checkout: Overview');
         await overviewPage.expectItemOverviewNames(inventoryNames);
         await overviewPage.expectItemOverviewPrices(inventoryPrices);
-        const overviewSumPrices = await UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
-        const overviewSubTotalPrice = await UtilsMethods.fixNumberPresicion(await overviewPage.getSubTotalValue(), 2);
+        const overviewSumPrices = UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
+        const overviewSubTotalPrice = UtilsMethods.fixNumberPresicion(await overviewPage.getSubTotalValue(), 2);
         expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
         await overviewPage.clickOnFinishButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'));

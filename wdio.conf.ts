@@ -33,6 +33,9 @@ const browserCap: Record<string, object> = {
 
 const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
 
+/** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
+const SPEC_FILE_RETRIES = 1;
+
 export const config = {
     runner: 'local',
     specs: [
@@ -59,6 +62,14 @@ export const config = {
     waitforTimeout: 10000,
     connectionRetryTimeout: 120000,
     connectionRetryCount: 3,
+
+    /**
+     * Retry a failed spec file once, after the rest of the run finishes, so a
+     * transient failure does not fail the whole build. `onWorkerEnd` below
+     * reports every retry: a retry that nobody sees is a muted test.
+     */
+    specFileRetries: SPEC_FILE_RETRIES,
+    specFileRetriesDeferred: true,
 
     services: [
         [
@@ -98,6 +109,21 @@ export const config = {
                 fs.mkdirSync(dir, { recursive: true });
                 console.log("✔ dir got created");
             }
+        }
+    },
+
+    /**
+     * Makes retries visible. A spec that only passes on its second attempt is
+     * flaky, and that fact has to reach a human — otherwise `specFileRetries`
+     * quietly hides exactly the failures worth investigating.
+     */
+    onWorkerEnd: function (cid: string, exitCode: number, specs: string[], retries: number) {
+        // `retries` is the budget REMAINING, not the number used, so a worker
+        // that never failed still reports the full budget here.
+        const retriesUsed = SPEC_FILE_RETRIES - retries;
+        if (retriesUsed > 0) {
+            const outcome = exitCode === 0 ? 'passed on retry — FLAKY' : 'still failed after retrying';
+            console.log(`⚠ ${specs.join(', ')} [${cid}] was retried ${retriesUsed}x and ${outcome}.`);
         }
     },
 

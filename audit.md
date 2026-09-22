@@ -18,8 +18,9 @@
 | `0df9a27` | Progress tracking added to this document |
 | `e330547` | Round 2 — finding #13 |
 | 500cb94 | Round 2 — findings #11, #10, #15 |
+| _pending_ | Round 3 — findings #28, #21, #16 |
 
-**Fixed — 10 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #13, and #15.
+**Fixed — 13 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #13, #15, #16, #21, and #28.
 
 **Partially fixed — 1 finding:** #9. The magic number is gone; the unbounded loop is not.
 
@@ -68,10 +69,10 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ✅ Fixed |
 | 14 | Misleading names and typos | Medium | ⬜ Open |
 | 15 | Dead code | Medium | ✅ Fixed |
-| 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ⬜ Open |
+| 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
-| 18–27 | Tooling and hygiene | Low | ⬜ Open |
-| 28 | Sort assertion does not wait for the list to re-render | High | ⬜ Open |
+| 18–27 | Tooling and hygiene | Low | ⬜ Open (#21 ✅ Fixed) |
+| 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -373,7 +374,9 @@ There is also inconsistent Hungarian notation: `strValue`, `objElement`, `intMin
 
 ---
 
-### 16. `async` functions that do nothing asynchronous, plus two latent bugs
+### 16. `async` functions that do nothing asynchronous, plus two latent bugs ✅ Fixed
+
+> **Fixed in round 3.** Verified both latent bugs directly: `sumArrAndFixPresicion([], 2)` now returns `0` where the old code threw `TypeError: Reduce of empty array with no initial value`, and `sortLowToHighValues` leaves its argument untouched. The three pure-data functions dropped `async`, and their call sites dropped the pointless `await`.
 
 **Where:** `tests/utils/utilsMethods.utils.ts:23`, `:28`, and `tests/pages/inventory.page.ts:100`
 
@@ -394,7 +397,9 @@ Two real bugs in the same file:
 
 ---
 
-### 28. The sort assertion does not wait for the list to re-render ⬜ Open
+### 28. The sort assertion does not wait for the list to re-render ✅ Fixed
+
+> **Fixed in round 3.** The factory's retry loop was generalized into `expectEventuallyEquals(label, readValues, expected)`, which re-reads a collected value until it matches. `expectTextsFromElements` now delegates to it, and the inventory page exposes `expectTextFromPrices` for the sort check.
 
 **Found during round 2, not in the original audit.**
 
@@ -433,7 +438,13 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 `wdio.conf.ts:62-72` loads `@wdio/visual-service`, but no test calls `checkScreen` or `checkElement`. Worse, `.gitignore:3` ignores `tests/visual-testing`, so **baselines can never be committed** and visual testing could never pass in CI regardless. Either write visual tests and un-ignore the baseline folder, or drop the dependency.
 
-### 21. No flake handling
+### 21. No flake handling ✅ Fixed
+
+> **Fixed in round 3.** Added `specFileRetries: 1` with `specFileRetriesDeferred: true`, plus an `onWorkerEnd` hook that reports any spec which consumed a retry, so retries cannot silently mute a flaky test.
+>
+> **Worth knowing:** the hook's `retries` argument is the retry budget **remaining**, not the number used — the launcher documents it as "Number or retries remaining". A first implementation read it as retries-used and reported every spec on every green run as flaky. The correct test is `SPEC_FILE_RETRIES - retries > 0`.
+>
+> Verified all three paths: a green run logs nothing; a spec that fails once and then passes logs `passed on retry — FLAKY` and the build stays green; a spec that always fails logs `still failed after retrying` and the build still fails, so retries do not mask real breakage.
 
 There is no `specFileRetries` in the config. For e2e against a live site, `specFileRetries: 1` with `specFileRetriesDeferred: true` is standard. Retries hide flakes, so pair this with tracking *which* specs retry — do not let it become a mute button.
 

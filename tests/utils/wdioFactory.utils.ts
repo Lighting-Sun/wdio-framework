@@ -96,27 +96,41 @@ export default class WdioFactoryUtils {
     }
 
     /**
-     * Retrying equivalent for a group of elements. Polls until the collected
-     * texts match, then asserts once more so a failure reports a readable diff
-     * rather than a bare `waitUntil` timeout.
+     * Re-reads `readValues` until it matches `arrExpected`, then asserts once
+     * more so a failure reports a readable diff rather than a bare `waitUntil`
+     * timeout.
+     *
+     * Use this whenever the expected side is itself collected from the page
+     * (a sorted list, a cart compared against what was added). A plain
+     * `expect(a).toEqual(b)` on two collected arrays reads the DOM once and
+     * races whatever re-render the last action triggered.
      */
-    async expectTextsFromElements(objElements: Locator, arrExpectedTexts: string[]): Promise<void> {
-        let actualTexts: string[] = [];
+    async expectEventuallyEquals<T>(strLabel: string, readValues: () => Promise<T[]>, arrExpected: T[]): Promise<void> {
+        let actualValues: T[] = [];
 
         await browser.waitUntil(
             async () => {
-                actualTexts = await this.getTextFromElements(objElements);
-                return actualTexts.length === arrExpectedTexts.length
-                    && actualTexts.every((text, index) => text === arrExpectedTexts[index]);
+                actualValues = await readValues();
+                return actualValues.length === arrExpected.length
+                    && actualValues.every((value, index) => value === arrExpected[index]);
             },
             {
                 timeout: TEXTS_RETRY_TIMEOUT,
-                timeoutMsg: `❌ ${objElements.description} never matched the expected texts.`,
+                timeoutMsg: `❌ ${strLabel} never matched the expected values.`,
             }
         ).catch(() => undefined);
 
-        expect(actualTexts).toEqual(arrExpectedTexts);
-        allureReporter.addStep(`✅ ${objElements.description} matches ${arrExpectedTexts.length} expected value(s)`);
+        expect(actualValues).toEqual(arrExpected);
+        allureReporter.addStep(`✅ ${strLabel} matches ${arrExpected.length} expected value(s)`);
+    }
+
+    /** Retrying equivalent of reading a group of elements and comparing their text. */
+    async expectTextsFromElements(objElements: Locator, arrExpectedTexts: string[]): Promise<void> {
+        await this.expectEventuallyEquals(
+            objElements.description,
+            () => this.getTextFromElements(objElements),
+            arrExpectedTexts
+        );
     }
 
     async selectOptionFromSelect(objElement: Locator, strAttr: string, srtValue: string): Promise<void> {

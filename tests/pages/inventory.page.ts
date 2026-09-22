@@ -32,6 +32,18 @@ class Inventory extends Page {
     }
 
     /**
+     * Retrying comparison for the price list. The sort control triggers a
+     * re-render, so a single read can still see the previous order.
+     */
+    async expectTextFromPrices(arrExpectedPrices: string[]): Promise<void> {
+        await this.wdioFactory.expectEventuallyEquals(
+            'inventory item prices',
+            () => this.getTextFromPrices(),
+            arrExpectedPrices
+        );
+    }
+
+    /**
      * Adds a fixed, caller-supplied list of products. Replaces the previous
      * random selection: a failure here names the exact products involved and
      * re-runs identically.
@@ -44,7 +56,7 @@ class Inventory extends Page {
         return itemDetails;
     }
 
-    async getProperyValuesFromArrayOfDetails(arrOfItemDetail: ItemDetail[], strPropertyToGet: keyof ItemDetail): Promise<string[]> {
+    getProperyValuesFromArrayOfDetails(arrOfItemDetail: ItemDetail[], strPropertyToGet: keyof ItemDetail): string[] {
         return arrOfItemDetail.map(detail => detail[strPropertyToGet]);
     }
 

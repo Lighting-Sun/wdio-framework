@@ -18,7 +18,6 @@ describe('login related scenarios', () => {
         await inventoryPage.header.expectPageTitle('Products');
         const beforeSortingPrices = UtilsMethods.sortLowToHighValues(await inventoryPage.getTextFromPrices());
         await inventoryPage.header.clickOnSortFilterDropdownOption('lohi');
-        const afterSortingPrices = await inventoryPage.getTextFromPrices();
-        expect(beforeSortingPrices).toEqual(afterSortingPrices);
+        await inventoryPage.expectTextFromPrices(beforeSortingPrices);
     });
 });
