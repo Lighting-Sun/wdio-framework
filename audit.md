@@ -3,7 +3,26 @@
 **Audience:** junior QA engineers working on this repo.
 **Date:** 2026-09-22
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** audit only — no code was changed. `npx tsc --noEmit` passes cleanly, which is a good baseline.
+**Status:** first round of fixes applied — see Progress below.
+
+---
+
+## Progress
+
+**Branch:** `fix/audit-critical-findings` · **Commits:** `d4f9fc0` (this document), `2913efd` (fixes)
+
+**Fixed — 6 findings:** #1, #3, #4, #6, #7, and #8 (the last was resolved as a side effect of rewriting the factory for #6/#7).
+
+**Partially fixed — 2 findings:** #9 and #10. Details are in their sections; both still need work.
+
+**Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
+
+**Verification at the time of the fix commit:**
+
+- `npx tsc --noEmit` — clean.
+- Full suite — 4 spec files, 8 tests passing (was 7; a cart-removal test was added).
+- A deliberately broken assertion produced 2 PNG attachments and retried before failing, confirming #1 and #6.
+- Allure results went from 109 `.txt` attachment files to 0, confirming #7.
 
 Each finding says *what* is wrong, *why* it matters, and *what to do about it*.
 
@@ -24,26 +43,26 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 
 ## Priority summary
 
-| # | Finding | Severity |
-|---|---------|----------|
-| 1 | Failure screenshots are taken and thrown away | Critical |
-| 2 | CI never uploads the report when tests fail | Critical — 🕓 deferred |
-| 3 | Tests inside one spec file share browser state | Critical |
-| 4 | Randomized test data makes failures unreproducible | Critical |
-| 5 | `--env dev` is broken | Critical — 🕓 deferred |
-| 6 | `await expect(await ...)` throws away auto-retrying assertions | High |
-| 7 | Allure gets 109 text attachments instead of steps | High |
-| 8 | `setValue` secretly clicks first | High |
-| 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High |
-| 10 | Brittle locators | High |
-| 11 | String-template locators have no safety net | High |
-| 12 | Massive duplication in specs — no fixture layer | Medium |
-| 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium |
-| 14 | Misleading names and typos | Medium |
-| 15 | Dead code | Medium |
-| 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium |
-| 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium |
-| 18–27 | Tooling and hygiene | Low |
+| # | Finding | Severity | Status |
+|---|---------|----------|--------|
+| 1 | Failure screenshots are taken and thrown away | Critical | ✅ Fixed |
+| 2 | CI never uploads the report when tests fail | Critical | 🕓 Deferred |
+| 3 | Tests inside one spec file share browser state | Critical | ✅ Fixed |
+| 4 | Randomized test data makes failures unreproducible | Critical | ✅ Fixed |
+| 5 | `--env dev` is broken | Critical | 🕓 Deferred |
+| 6 | `await expect(await ...)` throws away auto-retrying assertions | High | ✅ Fixed |
+| 7 | Allure gets 109 text attachments instead of steps | High | ✅ Fixed |
+| 8 | `setValue` secretly clicks first | High | ✅ Fixed |
+| 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High | ⚠ Partial |
+| 10 | Brittle locators | High | ⚠ Partial |
+| 11 | String-template locators have no safety net | High | ⬜ Open |
+| 12 | Massive duplication in specs — no fixture layer | Medium | ⬜ Open |
+| 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ⬜ Open |
+| 14 | Misleading names and typos | Medium | ⬜ Open |
+| 15 | Dead code | Medium | ⚠ Partial |
+| 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ⬜ Open |
+| 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
+| 18–27 | Tooling and hygiene | Low | ⬜ Open |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -51,7 +70,9 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 
 ## Critical — these cause real failures or lost information
 
-### 1. Failure screenshots are taken and thrown away
+### 1. Failure screenshots are taken and thrown away ✅ Fixed
+
+> **Fixed in `2913efd`.** `afterTest` now captures the returned base64 string and attaches it as `image/png`. Verified by forcing a failure: 2 PNGs were written and referenced in the result JSON.
 
 **Where:** `wdio.conf.ts:103-107`
 
@@ -92,7 +113,9 @@ if: ${{ always() && github.event.inputs.artifacts == 'true' }}
 
 ---
 
-### 3. Tests inside one spec file share browser state
+### 3. Tests inside one spec file share browser state ✅ Fixed
+
+> **Fixed in `2913efd`.** Added `tests/support/session.support.ts` with `resetBrowserState()` — it deletes cookies, clears session and local storage, then refreshes — and called it from every `beforeEach`. The end-of-test `removeAllItemsFromCart()` cleanup calls were removed, and cart removal became a test of its own.
 
 **Where:** `login.spec.ts:7-9`, `addProductsToCart.spec.ts:8-10`, and every other spec's `beforeEach`
 
@@ -118,7 +141,9 @@ Then remove the in-test `removeAllItemsFromCart()` calls. Keep a dedicated test 
 
 ---
 
-### 4. Randomized test data makes failures unreproducible
+### 4. Randomized test data makes failures unreproducible ✅ Fixed
+
+> **Fixed in `2913efd`.** `addRandomItemsToCart()` was replaced by `addItemsToCartByNames(data.cartProducts)`, with the product list pinned in `placeHolderData.json`. `getRandomNumber` and `getSetFromRange` were deleted, which also removes the infinite-loop risk described below.
 
 **Where:** `tests/pages/inventory.page.ts:89-98`, used by `completePurchase.spec.ts:22` and `addProductsToCart.spec.ts:18`
 
@@ -165,7 +190,9 @@ The `/v1/` app is the *old* SauceDemo build. It has no `data-test` attributes, s
 
 ## High — reliability and diagnosability
 
-### 6. `await expect(await ...)` throws away auto-retrying assertions
+### 6. `await expect(await ...)` throws away auto-retrying assertions ✅ Fixed
+
+> **Fixed in `2913efd`.** Added `expectText` and `expectTextsFromElements` to the factory and converted all 15 call sites. Chosen over exposing raw elements to specs so the “no `$()` outside the factory” rule and the centralized Allure logging both survive.
 
 **Where:** 15 occurrences across the four spec files, e.g. `login.spec.ts:18`
 
@@ -187,7 +214,9 @@ await expect(header.pageTitle).toHaveText('Products');
 
 ---
 
-### 7. Allure gets 109 text attachments instead of steps
+### 7. Allure gets 109 text attachments instead of steps ✅ Fixed
+
+> **Fixed in `2913efd`.** Every `addAttachment` became an `addStep`. Results went from 109 `.txt` files to 0; attachments are now reserved for failure screenshots.
 
 **Where:** `tests/utils/wdioFactory.utils.ts` — every `click`, `setValue`, `getText`, and selector resolution calls `allureReporter.addAttachment(...)`
 
@@ -201,7 +230,9 @@ Attachments are for *artifacts*: screenshots, HTML dumps, API payloads. For "wha
 
 ---
 
-### 8. `setValue` secretly clicks first
+### 8. `setValue` secretly clicks first ✅ Fixed
+
+> **Fixed in `2913efd`,** as a side effect of the factory rewrite for #6 and #7. The internal `this.click()` call is gone; `setValue` now waits for enabled and types.
 
 **Where:** `tests/utils/wdioFactory.utils.ts:37-48`
 
@@ -214,7 +245,9 @@ Attachments are for *artifacts*: screenshots, HTML dumps, API payloads. For "wha
 
 ---
 
-### 9. `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop
+### 9. `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop ⚠ Partially fixed
+
+> **Partially fixed in `2913efd`.** The magic `1000` became a named `CLICK_ALL_PROBE_TIMEOUT` constant, raised to 2000 ms. **Still open:** the `while` loop remains unbounded, so a click that never removes its element still spins until the Mocha timeout.
 
 **Where:** `tests/utils/wdioFactory.utils.ts:83-98`
 
@@ -226,7 +259,9 @@ It is also an **unbounded `while` loop**: if a click never removes the element, 
 
 ---
 
-### 10. Brittle locators
+### 10. Brittle locators ⚠ Partially fixed
+
+> **Partially fixed in `2913efd`.** The `:nth-of-type()` locators and the `inventory_item_name ` exact-match-with-trailing-space selector were deleted along with the index-based methods that #4 made redundant. **Still open:** six `//div[text()='...']` XPath locators across `inventory.page.ts` and `sidemenu.component.ts`.
 
 **Where:** `tests/pages/inventory.page.ts`
 
@@ -254,7 +289,7 @@ It is also an **unbounded `while` loop**: if a click never removes the element, 
 
 The block "login → assert URL → assert page title" is copy-pasted into **six** tests. `addProductsToCart.spec.ts:14-29` and `completePurchase.spec.ts:18-31` share roughly 13 near-identical lines.
 
-**Change:** add a `tests/support/` layer with reusable flows such as `loginAsStandardUser()`. Specs then read as business intent instead of click sequences.
+**Change:** add reusable flows such as `loginAsStandardUser()` to the `tests/support/` layer, which now exists — the #3 fix created it for `session.support.ts`. Specs then read as business intent instead of click sequences.
 
 Note this is **not** the same as a page object: a page object models a *page*, a fixture models a *precondition*.
 
@@ -303,7 +338,9 @@ There is also inconsistent Hungarian notation: `strValue`, `objElement`, `intMin
 
 ---
 
-### 15. Dead code
+### 15. Dead code ⚠ Partially fixed
+
+> **Partially fixed in `2913efd`.** The index-based locators and methods went with #4. **Still open:** `clickAddToCartByItemName`, `inventoryItemLabelFromName`, and `selectDropdownOption` are each still referenced only by their own definition.
 
 - `tests/pages/inventory.page.ts:11-14` — `inventoryItemLabelFromName` is never used and duplicates `inventoryItemNameByName`.
 - `tests/components/header.component.ts:25-28` — `selectDropdownOption` is never used.
@@ -380,13 +417,17 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**Now:**
+**✅ Round 1 — done (`2913efd`):** #1, #3, #4, #6, #7, #8.
 
-1. **#1** — a one-line fix that immediately makes every future failure debuggable.
-2. **#3** — test isolation; prevents cascading failures.
-3. **#4** — determinism.
-4. **#6, #7** — assertion and reporting quality.
-5. Everything else as cleanup PRs.
+**Round 2 — recommended next, in this order:**
+
+1. **#13 — typed test data.** Do this first because it is the cheapest safety net left: `resolveJsonModule` plus an `import` turns every `data.*` typo into a compile error instead of a runtime crash, and removes the cwd dependency. It also has to happen before #14, since renaming `invalidUser` without type checking means finding the missed call sites by running the suite.
+2. **#11 — placeholder guard in `getSelectorByValue`.** Small, contained, and it protects the six XPath template locators that #10 left in place. Pairs naturally with #9's unbounded loop — both are "the helper fails in a way that misreports where the problem is."
+3. **#10 (remainder) + #15 (remainder).** Replace the `//div[text()='...']` locators with `data-test` equivalents and delete the three dead members. Grouped because they touch the same two files and the dead code *is* locator code.
+4. **#16 — the two latent bugs.** `reduce` without an initial value throws on an empty cart, and `sortLowToHighValues` mutates its argument. Both are real defects, not style; the `async`-without-`await` cleanup rides along.
+5. **#12 + #14 — fixtures and naming.** Largest diff, lowest risk, and best done last so it lands on top of settled code. `tests/support/` already exists from the #3 fix, so #12 is an extension rather than a new layer.
+6. **#17 — sort coverage and the stale architecture doc.** New coverage, so it belongs after the refactors it would otherwise conflict with.
+7. **#18–27 — tooling.** ESLint/Prettier (#18) is worth pulling forward if more than one person is about to touch this repo; the rest can trickle in.
 
 **🕓 Deferred to a future pass:**
 
