@@ -1,12 +1,14 @@
 import loginPage from "../pages/login.page.js";
 import inventoryPage from "../pages/inventory.page.js";
 import UtilsMethods from "../utils/utilsMethods.utils.js";
+import { resetBrowserState } from "../support/session.support.js";
 import { readFileSync } from "fs";
 
 describe('login related scenarios', () => {
 
     beforeEach(async () => {
         await loginPage.openPage();
+        await resetBrowserState();
     });
 
     const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
@@ -15,10 +17,10 @@ describe('login related scenarios', () => {
         //TODO the test case is completed, reporting logs are missing
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
-        await expect(await inventoryPage.header.getPageTitleText()).toEqual('Products');
+        await inventoryPage.header.expectPageTitle('Products');
         const beforeSortingPrices = UtilsMethods.sortLowToHighValues(await inventoryPage.getTextFromPrices());
         await inventoryPage.header.clickOnSortFilterDropdownOption('lohi');
         const afterSortingPrices = await inventoryPage.getTextFromPrices();
-        await expect(beforeSortingPrices).toEqual(afterSortingPrices);
+        expect(beforeSortingPrices).toEqual(afterSortingPrices);
     });
 });

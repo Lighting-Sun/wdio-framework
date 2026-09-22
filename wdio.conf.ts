@@ -1,5 +1,6 @@
 import path from "node:path";
 import allure from "allure-commandline";
+import allureReporter from "@wdio/allure-reporter";
 import fs from 'fs';
 import yargs from "yargs";
 
@@ -101,9 +102,15 @@ export const config = {
     },
 
     afterTest: async function (_test: unknown, _context: unknown, { passed }: { passed: boolean }) {
-        if (!passed) {
-            await browser.takeScreenshot();
+        if (passed) {
+            return;
         }
+        const screenshot = await browser.takeScreenshot();
+        allureReporter.addAttachment(
+            'Screenshot on failure',
+            Buffer.from(screenshot, 'base64'),
+            'image/png'
+        );
     },
 
     onComplete: function () {

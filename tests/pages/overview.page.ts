@@ -37,6 +37,14 @@ class OverviewPage extends Page {
         return await this.wdioFactory.getTextFromElements(this.locators.overviewItemNames);
     }
 
+    async expectItemOverviewNames(arrExpectedNames: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemNames, arrExpectedNames);
+    }
+
+    async expectItemOverviewPrices(arrExpectedPrices: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemPrices, arrExpectedPrices);
+    }
+
     async getSubTotalValue(): Promise<number> {
         const subTotalText = (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
         return Number(subTotalText);

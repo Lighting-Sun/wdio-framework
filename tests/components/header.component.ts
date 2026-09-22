@@ -32,6 +32,10 @@ class Header extends BaseComponent {
         return await this.wdioFactoryUtils.getText(this.locators.pageTitle);
     }
 
+    async expectPageTitle(strExpectedTitle: string): Promise<void> {
+        await this.wdioFactoryUtils.expectText(this.locators.pageTitle, strExpectedTitle);
+    }
+
     async clickOnBurgerMenuBtn(): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
     }

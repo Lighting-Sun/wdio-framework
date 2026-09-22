@@ -49,6 +49,14 @@ class LoginPage extends Page {
         return await this.wdioFactory.getText(this.locators.loginLogo);
     }
 
+    async expectLoginErrorMessage(strExpectedMessage: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginErrorMessage, strExpectedMessage);
+    }
+
+    async expectLoginLogoText(strExpectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginLogo, strExpectedText);
+    }
+
     async loginWithCredentials(srtUserName: string, strPassword: string): Promise<void> {
         await this.fillUsername(srtUserName);
         await this.fillPassword(strPassword);

@@ -32,6 +32,14 @@ class CartPage extends Page {
         return await this.wdioFactory.getTextFromElements(this.locators.itemCartPrices);
     }
 
+    async expectItemCartNames(arrExpectedNames: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.itemCartNames, arrExpectedNames);
+    }
+
+    async expectItemCartPrices(arrExpectedPrices: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.itemCartPrices, arrExpectedPrices);
+    }
+
     async removeAllItemsFromCart(): Promise<void> {
         await this.wdioFactory.clickAllIfExists(this.locators.itemCartRemoveButton);
         await browser.waitUntil(async () => {
