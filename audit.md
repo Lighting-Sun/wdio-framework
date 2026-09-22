@@ -23,8 +23,9 @@
 | `868f897` | Round 4 — finding #14 |
 | `2dbff97` | Round 5 — finding #9; #29 diagnosed |
 | `a208a0a` | Round 6 — finding #20; #29 narrowed |
+| `02729e2`, `69799e2` | Round 7 — findings #18, #19 |
 
-**Fixed — 17 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #20, #21, and #28.
+**Fixed — 19 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #18, #19, #20, #21, and #28.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
@@ -76,7 +77,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
-| 18–27 | Tooling and hygiene | Low | ⬜ Open (#20, #21 ✅ Fixed) |
+| 18–27 | Tooling and hygiene | Low | ⬜ Open (#18, #19, #20, #21 ✅ Fixed) |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
 
@@ -88,7 +89,9 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 
 ### 1. Failure screenshots are taken and thrown away ✅ Fixed
 
-> **Fixed in `2913efd`.** `afterTest` now captures the returned base64 string and attaches it as `image/png`. Verified by forcing a failure: 2 PNGs were written and referenced in the result JSON.
+> **Fixed in `2913efd`; completed in `02729e2`.** `afterTest` now captures the returned base64 string and attaches it as `image/png`. Verified by forcing a failure: 2 PNGs were written and referenced in the result JSON.
+>
+> **The first fix was incomplete.** `addAttachment` returns `Promise<void>` and was not awaited, so `afterTest` could resolve before the attachment was written and the screenshot could still be lost during teardown — the exact failure this finding exists to prevent. ESLint's `no-floating-promises` caught it when #18 landed, which is the clearest argument for that finding that this audit has produced.
 
 **Where:** `wdio.conf.ts:103-107`
 
@@ -508,11 +511,29 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 ## Low — tooling and hygiene
 
-### 18. No ESLint or Prettier config exists
+### 18. No ESLint or Prettier config exists ✅ Fixed
+
+> **Fixed in `02729e2` (config and lint fixes) and `69799e2` (the reformat).** Flat `eslint.config.js` with `js.configs.recommended`, typescript-eslint `recommended`, `eslint-plugin-wdio`'s `flat/recommended` on `tests/`, and `eslint-config-prettier` last. `recommendedTypeChecked` was deliberately skipped as far noisier than this codebase needs, but `projectService` is on so the type-aware rules work. `no-shadow` is enabled because #14's rename produced exactly that bug.
+>
+> **It found 19 real problems on the first run, one of which matters:** `afterTest` did not `await allureReporter.addAttachment`, so the hook could resolve before the screenshot was written — **finding #1's fix had a latent hole in it.** See the note on #1.
+>
+> The rest: 7 unawaited `addStep` calls, two `async` functions with nothing to await (`getSelectorByValue`, `getSideMenuOptionByValue` — both desynced, call sites updated, per #16's precedent), `let` that should be `const`, and an unused catch binding.
+>
+> **One rule is suppressed rather than obeyed.** `await-thenable` fires on `await $$(...)` in `getElements`, because WDIO types `ChainablePromiseArray` as extending `AsyncIterators` rather than `Promise`. The runtime object *is* thenable and the `await` is load-bearing — probed directly: `await $$(...)` gives a real Array whose `.length` is the number `3`, while `$$(...).length` without the await is a Promise. Dropping it would make `initialCount` a Promise and silently skip the loops in `clickAllIfExists` and `removeAllItemsFromCart`. Suppressed inline with that explanation.
+>
+> Prettier is scoped to code: `.prettierignore` excludes `*.md` and `.github`, since the audit and handoff carry hand-aligned tables and workflow YAML formatting is not code style.
+>
+> **Adjacent and still open:** #24 owns wiring `lint` and `typecheck` into CI. The scripts exist; nothing enforces them yet.
+
+
 
 `README.md` instructs contributors to install both extensions, but there is no `eslint.config.js` or `.prettierrc`, so everyone formats differently. Add both, plus `eslint-plugin-wdio` — it catches exactly the mistakes described in finding #6.
 
-### 19. The config object is not typed
+### 19. The config object is not typed ✅ Fixed
+
+> **Fixed in `02729e2`.** Typed as `WebdriverIO.Config`, which also removed the need for `logLevel: 'error' as const`. Verified the annotation earns its keep rather than assuming it: renaming `maxInstances` to `maxInstanses` now fails the build with *"Object literal may only specify known properties, but 'maxInstanses' does not exist in type 'Config'. Did you mean to write 'maxInstances'?"* Before the annotation, that typo compiled silently and the setting was simply ignored at runtime.
+
+
 
 `wdio.conf.ts:35` is `export const config = {...}` with no annotation. Typing it as `WebdriverIO.Config` gives autocomplete and catches typo'd keys at compile time. It also removes the need for `'error' as const` on line 56.
 
@@ -562,7 +583,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 6:**
+**✅ Done — rounds 1 to 7:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -572,13 +593,14 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 4 | `6d48709`, `868f897` | #12, #14 |
 | 5 | `2dbff97` | #9; #29 diagnosed, not fixed |
 | 6 | `a208a0a` | #20; #29 narrowed — visual service ruled out |
+| 7 | `02729e2`, `69799e2` | #18, #19 |
 
 **Recommended next, in this order:**
 
 1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. Note the crash is not specific to any spec file — do not go hunting inside one.
-2. **#18 — ESLint and Prettier.** Worth pulling forward. It would have caught the variable shadowing that #14's rename introduced, before `tsc` did, and the README already instructs contributors to install both extensions even though no config exists. Pair it with **#24**, so the lint and typecheck scripts actually run in CI rather than being config nobody enforces.
+2. **#24 — wire `lint` and `typecheck` into CI.** Promoted from Low. #18 landed the scripts but nothing runs them, so a type error or a floating promise still ships. This is now the cheapest real safety gain on the list.
 3. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
-4. **#19, #22–#27 — the rest of the tooling.** Untyped config object, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
+4. **#22–#27 — the rest of the tooling.** `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
 
 **🕓 Deferred to a future pass:**
 
