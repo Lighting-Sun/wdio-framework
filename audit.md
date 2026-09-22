@@ -3,13 +3,20 @@
 **Audience:** junior QA engineers working on this repo.
 **Date:** 2026-09-22
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** first round of fixes applied — see Progress below.
+**Status:** fixes in progress — see Progress below.
 
 ---
 
 ## Progress
 
-**Branch:** `fix/audit-critical-findings` · **Commits:** `d4f9fc0` (this document), `2913efd` (fixes)
+**Branch:** `fix/audit-critical-findings`
+
+| Commit | What |
+|--------|------|
+| `d4f9fc0` | This document |
+| `2913efd` | Round 1 — findings #1, #3, #4, #6, #7, #8 |
+| `0df9a27` | Progress tracking added to this document |
+| `e330547` | Round 2 — finding #13 |
 
 **Fixed — 7 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), and #13.
 
