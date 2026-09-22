@@ -28,7 +28,7 @@ export default class WdioFactoryUtils {
         const elementDescription = element.description;
         await elementSelector.waitForClickable({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
         await elementSelector.click();
-        allureReporter.addStep(`🥾 Clicked ${elementDescription}`);
+        await allureReporter.addStep(`🥾 Clicked ${elementDescription}`);
     }
 
     /**
@@ -38,7 +38,7 @@ export default class WdioFactoryUtils {
      * confusing "element not found", pointing at the page object rather than
      * at the bad input.
      */
-    async getSelectorByValue(element: Locator, value: string | number): Promise<Locator> {
+    getSelectorByValue(element: Locator, value: string | number): Locator {
         const valueStr = String(value);
 
         if (!element.selector.includes(VALUE_PLACEHOLDER)) {
@@ -64,7 +64,7 @@ export default class WdioFactoryUtils {
         const elementDescription = element.description;
         await elementSelector.waitForEnabled({ timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.` });
         await elementSelector.setValue(valueToSend);
-        allureReporter.addStep(`⌨ Set ${elementDescription} to "${valueToSend}"`);
+        await allureReporter.addStep(`⌨ Set ${elementDescription} to "${valueToSend}"`);
     }
 
     async getText(element: Locator): Promise<string> {
@@ -72,11 +72,21 @@ export default class WdioFactoryUtils {
         const elementDescription = element.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
         const textFromElement = await elementSelector.getText();
-        allureReporter.addStep(`👀 Read ${elementDescription}: "${textFromElement}"`);
+        await allureReporter.addStep(`👀 Read ${elementDescription}: "${textFromElement}"`);
         return textFromElement;
     }
 
     async getElements(elements: Locator): Promise<WebdriverIO.Element[]> {
+        /**
+         * The `await` is load-bearing and the rule below is a false positive.
+         * WDIO's `ChainablePromiseArray` extends `AsyncIterators`, not `Promise`,
+         * so the type says it is not thenable — but the runtime object is.
+         * Probed directly: `await $$(...)` yields a real Array whose `.length` is
+         * a number, while `$$(...).length` without the await is a Promise.
+         * Dropping it would make callers compare against a Promise and silently
+         * skip every loop over the result.
+         */
+        // eslint-disable-next-line @typescript-eslint/await-thenable
         return (await $$(elements.selector)) as unknown as WebdriverIO.Element[];
     }
 
@@ -92,7 +102,7 @@ export default class WdioFactoryUtils {
      */
     async expectText(element: Locator, expectedText: string): Promise<void> {
         await expect($(element.selector)).toHaveText(expectedText);
-        allureReporter.addStep(`✅ ${element.description} has text "${expectedText}"`);
+        await allureReporter.addStep(`✅ ${element.description} has text "${expectedText}"`);
     }
 
     /**
@@ -121,7 +131,7 @@ export default class WdioFactoryUtils {
         ).catch(() => undefined);
 
         expect(actualValues).toEqual(expected);
-        allureReporter.addStep(`✅ ${label} matches ${expected.length} expected value(s)`);
+        await allureReporter.addStep(`✅ ${label} matches ${expected.length} expected value(s)`);
     }
 
     /** Retrying equivalent of reading a group of elements and comparing their text. */
@@ -138,7 +148,7 @@ export default class WdioFactoryUtils {
         const elementDescription = element.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout.` });
         await elementSelector.selectByAttribute(attribute, value);
-        allureReporter.addStep(`🔽 Selected "${value}" in ${elementDescription}`);
+        await allureReporter.addStep(`🔽 Selected "${value}" in ${elementDescription}`);
     }
 
     /**
@@ -168,6 +178,6 @@ export default class WdioFactoryUtils {
                 timeoutMsg: `❌ ${element.description}: ${initialCount} were present and each was clicked, but some remain. A click is not removing its element.`,
             }
         );
-        allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained (${initialCount})`);
+        await allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained (${initialCount})`);
     }
 }

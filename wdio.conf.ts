@@ -5,7 +5,7 @@ import yargs from "yargs";
 
 const argv = yargs(process.argv.slice(2)).parseSync();
 
-let allureDir = "./reports/allure";
+const allureDir = "./reports/allure";
 
 const selectedEnv = (argv['env'] as string | undefined) ?? 'qa';
 const environments: Record<string, string> = {
@@ -35,7 +35,7 @@ const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
 /** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
 const SPEC_FILE_RETRIES = 1;
 
-export const config = {
+export const config: WebdriverIO.Config = {
     runner: 'local',
     specs: [
         './tests/specs/**/*.ts'
@@ -56,7 +56,7 @@ export const config = {
     maxInstances: 10,
     baseUrl,
     capabilities: [selectedBrowserCap],
-    logLevel: 'error' as const,
+    logLevel: 'error',
     bail: 0,
     waitforTimeout: 10000,
     connectionRetryTimeout: 120000,
@@ -90,7 +90,7 @@ export const config = {
                 fs.rmSync(dir, { recursive: true });
                 console.log(`🗑 ${dir} is deleted`);
             }
-        } catch (error) {
+        } catch {
             console.log("⚠ error while deleting this dir");
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
@@ -119,7 +119,9 @@ export const config = {
             return;
         }
         const screenshot = await browser.takeScreenshot();
-        allureReporter.addAttachment(
+        // Must be awaited: afterTest resolving before the attachment is written
+        // can lose the screenshot during teardown, which is the whole point of #1.
+        await allureReporter.addAttachment(
             'Screenshot on failure',
             Buffer.from(screenshot, 'base64'),
             'image/png'

@@ -61,17 +61,17 @@ class Inventory extends Page {
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, UtilsMethods.toProductSlug(value));
         return await this.wdioFactory.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, UtilsMethods.toProductSlug(value));
         return await this.wdioFactory.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value: string): Promise<void> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, UtilsMethods.toProductSlug(value));
         await this.wdioFactory.click(selector);
     }
 

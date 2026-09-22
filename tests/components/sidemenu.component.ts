@@ -10,12 +10,12 @@ class SideMenu extends BaseComponent {
         }
     };
 
-    async getSideMenuOptionByValue(value: string): Promise<Locator> {
-        return await this.wdioFactoryUtils.getSelectorByValue(this.locators.sideMenuOption, value);
+    getSideMenuOptionByValue(value: string): Locator {
+        return this.wdioFactoryUtils.getSelectorByValue(this.locators.sideMenuOption, value);
     }
 
     async clickOnSideMenuOptionByValue(value: string): Promise<void> {
-        await this.wdioFactoryUtils.click(await this.getSideMenuOptionByValue(value));
+        await this.wdioFactoryUtils.click(this.getSideMenuOptionByValue(value));
     }
 }
 
