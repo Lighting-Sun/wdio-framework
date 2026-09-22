@@ -21,10 +21,6 @@ class Header extends BaseComponent {
         sortFilterDropdown: {
             selector: "select.product_sort_container",
             description: "sort filter dropdown",
-        },
-        selectDropdownOption: {
-            selector: "select option[value='${value}']",
-            description: "'${value}' select option",
         }
     };
 

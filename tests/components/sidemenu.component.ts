@@ -5,7 +5,7 @@ class SideMenu extends BaseComponent {
 
     locators = {
         sideMenuOption: {
-            selector: "//a[@class='bm-item menu-item'][text()='${value}']",
+            selector: "a[data-test='${value}-sidebar-link']",
             description: "side menu option '${value}'"
         }
     };

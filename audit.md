@@ -17,10 +17,11 @@
 | `2913efd` | Round 1 — findings #1, #3, #4, #6, #7, #8 |
 | `0df9a27` | Progress tracking added to this document |
 | `e330547` | Round 2 — finding #13 |
+| _pending_ | Round 2 — findings #11, #10, #15 |
 
-**Fixed — 7 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), and #13.
+**Fixed — 10 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #13, and #15.
 
-**Partially fixed — 2 findings:** #9 and #10. Details are in their sections; both still need work.
+**Partially fixed — 1 finding:** #9. The magic number is gone; the unbounded loop is not.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
@@ -61,15 +62,16 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 7 | Allure gets 109 text attachments instead of steps | High | ✅ Fixed |
 | 8 | `setValue` secretly clicks first | High | ✅ Fixed |
 | 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High | ⚠ Partial |
-| 10 | Brittle locators | High | ⚠ Partial |
-| 11 | String-template locators have no safety net | High | ⬜ Open |
+| 10 | Brittle locators | High | ✅ Fixed |
+| 11 | String-template locators have no safety net | High | ✅ Fixed |
 | 12 | Massive duplication in specs — no fixture layer | Medium | ⬜ Open |
 | 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ✅ Fixed |
 | 14 | Misleading names and typos | Medium | ⬜ Open |
-| 15 | Dead code | Medium | ⚠ Partial |
+| 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ⬜ Open |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
 | 18–27 | Tooling and hygiene | Low | ⬜ Open |
+| 28 | Sort assertion does not wait for the list to re-render | High | ⬜ Open |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -266,9 +268,13 @@ It is also an **unbounded `while` loop**: if a click never removes the element, 
 
 ---
 
-### 10. Brittle locators ⚠ Partially fixed
+### 10. Brittle locators ✅ Fixed
 
-> **Partially fixed in `2913efd`.** The `:nth-of-type()` locators and the `inventory_item_name ` exact-match-with-trailing-space selector were deleted along with the index-based methods that #4 made redundant. **Still open:** six `//div[text()='...']` XPath locators across `inventory.page.ts` and `sidemenu.component.ts`.
+> **Fixed across `2913efd` and round 2.** The `:nth-of-type()` and trailing-space selectors went with #4. Round 2 replaced every text-matching XPath with a `data-test` selector, after dumping the live DOM to confirm the attributes exist.
+>
+> The DOM dump also showed `inventory_item_name` **no longer has a trailing space**, so the old `div[class='inventory_item_name ']` locator would have matched nothing today.
+>
+> Product lookups now key off SauceDemo's slug attributes rather than visible text: `div[data-test='inventory-item']:has(button[data-test$='-sauce-labs-onesie'])`. The `:has()` suffix match works for both the `add-to-cart-` and `remove-` states of the button. `UtilsMethods.toProductSlug()` derives the slug, so specs still pass a readable product name.
 
 **Where:** `tests/pages/inventory.page.ts`
 
@@ -280,7 +286,13 @@ It is also an **unbounded `while` loop**: if a click never removes the element, 
 
 ---
 
-### 11. String-template locators have no safety net
+### 11. String-template locators have no safety net ✅ Fixed
+
+> **Fixed in round 2.** `getSelectorByValue` now throws a named error when the locator has no `${value}` placeholder, and when the value contains a quote character that would produce an invalid selector. Substitution uses `replaceAll`.
+>
+> Verified all three paths directly: two placeholders in one selector are both replaced; a placeholder-less locator throws; `O'Brien` throws.
+>
+> **Known limitation:** values containing quotes are rejected rather than escaped. Proper escaping needs XPath `concat()`, which plain string substitution cannot express. Rejecting loudly beats building a broken selector quietly.
 
 **Where:** `tests/utils/wdioFactory.utils.ts:22-35`
 
@@ -349,9 +361,9 @@ There is also inconsistent Hungarian notation: `strValue`, `objElement`, `intMin
 
 ---
 
-### 15. Dead code ⚠ Partially fixed
+### 15. Dead code ✅ Fixed
 
-> **Partially fixed in `2913efd`.** The index-based locators and methods went with #4. **Still open:** `clickAddToCartByItemName`, `inventoryItemLabelFromName`, and `selectDropdownOption` are each still referenced only by their own definition.
+> **Fixed across `2913efd` and round 2.** The index-based locators and methods went with #4; round 2 removed `clickAddToCartByItemName`, `inventoryItemLabelFromName`, `addToCartButtonBasedOnItemName`, and `selectDropdownOption`. A grep confirms zero references to each.
 
 - `tests/pages/inventory.page.ts:11-14` — `inventoryItemLabelFromName` is never used and duplicates `inventoryItemNameByName`.
 - `tests/components/header.component.ts:25-28` — `selectDropdownOption` is never used.
@@ -379,6 +391,31 @@ Two real bugs in the same file:
 `tests/specs/filter.spec.ts` tests only `lohi`. The architecture doc (`architechture/projectArchitechture.md`) claims it covers "all four product sort options" — **the doc is already out of date**, and it still refers to `.js` files that were converted to `.ts` in the most recent commit.
 
 **Change:** add `hilo`, `az`, and `za` as a data-driven loop, and update the doc. Treat doc drift as a bug — a doc that lies is worse than no doc.
+
+---
+
+### 28. The sort assertion does not wait for the list to re-render ⬜ Open
+
+**Found during round 2, not in the original audit.**
+
+**Where:** `tests/specs/filter.spec.ts:19-22`
+
+```ts
+const beforeSortingPrices = UtilsMethods.sortLowToHighValues(await inventoryPage.getTextFromPrices());
+await inventoryPage.header.clickOnSortFilterDropdownOption('lohi');
+const afterSortingPrices = await inventoryPage.getTextFromPrices();
+expect(beforeSortingPrices).toEqual(afterSortingPrices);
+```
+
+`getTextFromPrices()` reads the DOM once, with no wait. It runs immediately after the sort is triggered, so if React has not re-rendered the list yet it reads the **pre-sort** order and the comparison fails.
+
+This is the same class of defect as #6, which is why it survived that fix: #6 converted assertions comparing an element against a **literal**, while this one compares two **collected arrays**, so it was not part of that sweep.
+
+**Why it is recorded here:** one run in nine failed during round 2 verification and did not reproduce across the eight runs that followed, so the failing spec was never identified. This race is the most plausible candidate, and it is a real defect on inspection regardless of whether it caused that particular failure.
+
+**Change:** assert with a retrying comparison — `browser.waitUntil` around the price read, in the shape of the factory's `expectTextsFromElements`, so the check re-reads until the list settles.
+
+**Related:** #21 (no `specFileRetries`) and #1 (failure screenshots, now fixed) would both have made this easier to diagnose — with #1 in place, a future occurrence leaves a screenshot behind.
 
 ---
 

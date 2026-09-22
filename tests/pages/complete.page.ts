@@ -7,7 +7,7 @@ class CompletePage extends Page {
 
     locators = {
         completePurchaseHeader: {
-            selector: "//h2[@class='complete-header']",
+            selector: "h2[data-test='complete-header']",
             description: "complete purchase h2",
         },
     };

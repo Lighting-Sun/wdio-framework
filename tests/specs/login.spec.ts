@@ -32,7 +32,7 @@ describe('login related scenarios', () => {
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await inventoryPage.header.expectPageTitle('Products');
         await inventoryPage.header.clickOnBurgerMenuBtn();
-        await inventoryPage.header.sideMenu.clickOnSideMenuOptionByValue('Logout');
+        await inventoryPage.header.sideMenu.clickOnSideMenuOptionByValue('logout');
         await loginPage.expectLoginLogoText('Swag Labs');
     });
 });

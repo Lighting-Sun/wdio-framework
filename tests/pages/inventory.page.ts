@@ -1,4 +1,5 @@
 import Header from '../components/header.component.js';
+import UtilsMethods from '../utils/utilsMethods.utils.js';
 import Page from './page.js';
 
 type ItemDetail = { itemName: string; itemPrice: string };
@@ -7,36 +8,23 @@ class Inventory extends Page {
     header = new Header();
 
     locators = {
-        inventoryItemLabelFromName: {
-            selector: "//div[text()='${value}']",
-            description: "item label name '${value}'",
-        },
         inventoryItemPrice: {
-            selector: "div[class='inventory_item_price']",
+            selector: "div[data-test='inventory-item-price']",
             description: "inventory item price",
         },
-        addToCartButtonBasedOnItemName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@class='inventory_item_description']//button[text()='Add to cart']",
-            description: "add to cart button based on item name '${value}'",
-        },
         inventoryItemNameByName: {
-            selector: "//div[text()='${value}']",
-            description: "inventory item name based on ${value}'",
+            selector: "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-name']",
+            description: "inventory item name for '${value}'",
         },
         inventoryItemPriceByName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//div[@data-test='inventory-item-price']",
-            description: "inventory item price based on ${value}'",
+            selector: "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-price']",
+            description: "inventory item price for '${value}'",
         },
         inventoryAddToCartButtonByName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//button",
-            description: "inventory item price based on ${value}'",
+            selector: "button[data-test='add-to-cart-${value}']",
+            description: "add to cart button for '${value}'",
         }
     };
-
-    async clickAddToCartByItemName(strItemName: string): Promise<void> {
-        const element = await this.wdioFactory.getSelectorByValue(this.locators.addToCartButtonBasedOnItemName, strItemName);
-        await this.wdioFactory.click(element);
-    }
 
     async getTextFromPrices(): Promise<string[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
@@ -61,17 +49,17 @@ class Inventory extends Page {
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, value);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, UtilsMethods.toProductSlug(value));
         return await this.wdioFactory.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, value);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, UtilsMethods.toProductSlug(value));
         return await this.wdioFactory.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value: string): Promise<void> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, value);
+        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, UtilsMethods.toProductSlug(value));
         await this.wdioFactory.click(selector);
     }
 

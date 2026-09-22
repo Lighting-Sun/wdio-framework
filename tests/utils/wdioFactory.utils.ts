@@ -5,6 +5,16 @@ export interface Locator {
     description: string;
 }
 
+/** Token that dynamic locators substitute a runtime value into. */
+const VALUE_PLACEHOLDER = '${value}';
+
+/**
+ * Quote characters would terminate the quoted section of a selector early and
+ * produce an invalid one. Escaping them properly needs XPath `concat()`, which
+ * a plain string substitution cannot express, so such values are rejected.
+ */
+const UNSAFE_VALUE_CHARS = /['"]/;
+
 /** How long a group-of-elements assertion keeps re-reading the DOM before failing. */
 const TEXTS_RETRY_TIMEOUT = 10_000;
 
@@ -21,13 +31,31 @@ export default class WdioFactoryUtils {
         allureReporter.addStep(`🥾 Clicked ${elementDescription}`);
     }
 
+    /**
+     * Substitutes a runtime value into a dynamic locator.
+     *
+     * Both failure modes below used to pass silently and surface later as a
+     * confusing "element not found", pointing at the page object rather than
+     * at the bad input.
+     */
     async getSelectorByValue(objElement: Locator, strValue: string | number): Promise<Locator> {
         const valueStr = String(strValue);
-        const elementSelector = objElement.selector.replace('${value}', valueStr);
-        const elementDescription = objElement.description.replace('${value}', valueStr);
+
+        if (!objElement.selector.includes(VALUE_PLACEHOLDER)) {
+            throw new Error(
+                `❌ Cannot substitute "${valueStr}": the locator for ${objElement.description} has no ${VALUE_PLACEHOLDER} placeholder. Selector: ${objElement.selector}`
+            );
+        }
+
+        if (UNSAFE_VALUE_CHARS.test(valueStr)) {
+            throw new Error(
+                `❌ Cannot substitute "${valueStr}" into the locator for ${objElement.description}: quote characters would produce an invalid selector.`
+            );
+        }
+
         return {
-            selector: elementSelector,
-            description: elementDescription,
+            selector: objElement.selector.replaceAll(VALUE_PLACEHOLDER, valueStr),
+            description: objElement.description.replaceAll(VALUE_PLACEHOLDER, valueStr),
         };
     }
 
