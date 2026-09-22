@@ -19,8 +19,8 @@ describe('complete purchase scenarios', () => {
     it('Should do a successful purchase', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
-        const inventoryNames = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
-        const inventoryPrices = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
+        const inventoryNames = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemName');
+        const inventoryPrices = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemPrice');
         await openCart();
         await cartPage.expectItemCartNames(inventoryNames);
         await cartPage.expectItemCartPrices(inventoryPrices);
@@ -33,8 +33,8 @@ describe('complete purchase scenarios', () => {
         await overviewPage.header.expectPageTitle('Checkout: Overview');
         await overviewPage.expectItemOverviewNames(inventoryNames);
         await overviewPage.expectItemOverviewPrices(inventoryPrices);
-        const overviewSumPrices = UtilsMethods.sumArrAndFixPresicion(await overviewPage.getValuesFromPrices(), 2);
-        const overviewSubTotalPrice = UtilsMethods.fixNumberPresicion(await overviewPage.getSubTotalValue(), 2);
+        const overviewSumPrices = UtilsMethods.sumArrAndFixPrecision(await overviewPage.getValuesFromPrices(), 2);
+        const overviewSubTotalPrice = UtilsMethods.fixNumberPrecision(await overviewPage.getSubTotalValue(), 2);
         expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
         await overviewPage.clickOnFinishButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'));

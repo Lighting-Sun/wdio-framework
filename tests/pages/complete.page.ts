@@ -16,8 +16,8 @@ class CompletePage extends Page {
         return this.wdioFactory.getText(this.locators.completePurchaseHeader);
     }
 
-    async expectCompletePurchaseText(strExpectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.completePurchaseHeader, strExpectedText);
+    async expectCompletePurchaseText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.completePurchaseHeader, expectedText);
     }
 }
 

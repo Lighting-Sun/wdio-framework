@@ -19,8 +19,10 @@
 | `e330547` | Round 2 — finding #13 |
 | 500cb94 | Round 2 — findings #11, #10, #15 |
 | 2237345 | Round 3 — findings #28, #21, #16 |
+| `6d48709` | Round 4 — finding #12 |
+| _pending_ | Round 4 — finding #14 |
 
-**Fixed — 13 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #13, #15, #16, #21, and #28.
+**Fixed — 15 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #12, #13, #14, #15, #16, #21, and #28.
 
 **Partially fixed — 1 finding:** #9. The magic number is gone; the unbounded loop is not.
 
@@ -65,14 +67,15 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High | ⚠ Partial |
 | 10 | Brittle locators | High | ✅ Fixed |
 | 11 | String-template locators have no safety net | High | ✅ Fixed |
-| 12 | Massive duplication in specs — no fixture layer | Medium | ⬜ Open |
+| 12 | Massive duplication in specs — no fixture layer | Medium | ✅ Fixed |
 | 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ✅ Fixed |
-| 14 | Misleading names and typos | Medium | ⬜ Open |
+| 14 | Misleading names and typos | Medium | ✅ Fixed |
 | 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
 | 18–27 | Tooling and hygiene | Low | ⬜ Open (#21 ✅ Fixed) |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
+| 29 | `filter.spec` fails rarely under parallel load, before the test body runs | High | ⬜ Open |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -305,7 +308,11 @@ It is also an **unbounded `while` loop**: if a click never removes the element, 
 
 ## Medium — maintainability
 
-### 12. Massive duplication in specs — no fixture layer
+### 12. Massive duplication in specs — no fixture layer ✅ Fixed
+
+> **Fixed in `6d48709`.** Added `tests/support/flows.support.ts` with `loginAsStandardUser()` and `openCart()`, replacing six copies of the login block and four of the open-cart block.
+>
+> **Deliberately not applied everywhere:** the two `login.spec` tests whose *subject* is logging in still drive the login page directly. A fixture must never hide the thing under test — only the logout test, where login is a precondition, uses the flow.
 
 The block "login → assert URL → assert page title" is copy-pasted into **six** tests. `addProductsToCart.spec.ts:14-29` and `completePurchase.spec.ts:18-31` share roughly 13 near-identical lines.
 
@@ -342,7 +349,13 @@ You get compile-time checking of every field and cwd-independence for free.
 
 ---
 
-### 14. Misleading names and typos
+### 14. Misleading names and typos ✅ Fixed
+
+> **Fixed in round 4.** Every row in the table below, plus the `architechture/` → `architecture/` directory rename (and `projectArchitechture.md` → `projectArchitecture.md`). References to the old path inside the gitignored `.claude.md` files were updated too, so nothing dangles.
+>
+> **Prefixes:** dropped, per your call — 102 identifiers across 9 files lost their `str`/`obj`/`int`/`arr`/`num` prefixes, since the type is already in the TypeScript signature.
+>
+> The rename surfaced a latent shadowing bug that `tsc` caught: in `clickAllIfExists`, the parameter and a local variable both became `element`. The local is now `probe`. Worth noting as the argument for mechanical renames being compiler-verified rather than done by eye.
 
 Small individually, but this is what a reviewer reads first.
 
@@ -391,7 +404,7 @@ Two real bugs in the same file:
 
 ### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale
 
-`tests/specs/filter.spec.ts` tests only `lohi`. The architecture doc (`architechture/projectArchitechture.md`) claims it covers "all four product sort options" — **the doc is already out of date**, and it still refers to `.js` files that were converted to `.ts` in the most recent commit.
+`tests/specs/filter.spec.ts` tests only `lohi`. The architecture doc (`architecture/projectArchitecture.md`) claims it covers "all four product sort options" — **the doc is already out of date**, and it still refers to `.js` files that were converted to `.ts` in the most recent commit.
 
 **Change:** add `hilo`, `az`, and `za` as a data-driven loop, and update the doc. Treat doc drift as a bug — a doc that lies is worse than no doc.
 
@@ -421,6 +434,29 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 **Change:** assert with a retrying comparison — `browser.waitUntil` around the price read, in the shape of the factory's `expectTextsFromElements`, so the check re-reads until the list settles.
 
 **Related:** #21 (no `specFileRetries`) and #1 (failure screenshots, now fixed) would both have made this easier to diagnose — with #1 in place, a future occurrence leaves a screenshot behind.
+
+---
+
+### 29. `filter.spec` fails rarely under parallel load, before the test body runs ⬜ Open
+
+**Found during round 4. Not caused by the round-4 changes — a failure with the same signature occurred back in round 2, before them.**
+
+**What is known:**
+
+- Frequency is roughly 1 run in 10–15 of the full 4-worker suite.
+- The spec produces **no Allure result file and no failure screenshot**, so the failure happens outside the test body — `afterTest` never runs. This rules out an assertion failure.
+- It passes 6/6 when run alone with `--spec`, and did not reproduce across 14 consecutive full-suite runs afterwards.
+- The retry also failed, so it is not purely transient within a single run.
+
+**Most likely cause:** contention during browser session creation when four workers start simultaneously. `maxInstances: 10` against 4 spec files means all four launch at once.
+
+**Where to look next:**
+
+1. Run with `--logLevel debug` in a loop and keep the worker log from a failing run — the launcher log will name the session error.
+2. Try `maxInstances: 2` and see whether the rate drops, which would confirm the contention theory.
+3. Check whether `@wdio/visual-service` (configured but unused, finding #20) participates in session setup.
+
+**Secondary observation:** the one captured failure logged `was retried 2x` although the retry budget is 1. With `specFileRetries: 1` the hook's arithmetic should top out at `1x`, and it did in the controlled test used to verify #21. Worth confirming whether the launcher can call `onWorkerEnd` with a negative remaining count on some path.
 
 ---
 

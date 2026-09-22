@@ -4,14 +4,14 @@ import UtilsMethods from "../utils/utilsMethods.utils.js";
 import { resetBrowserState } from "../support/session.support.js";
 import { loginAsStandardUser } from "../support/flows.support.js";
 
-describe('login related scenarios', () => {
+describe('product sorting scenarios', () => {
 
     beforeEach(async () => {
         await loginPage.openPage();
         await resetBrowserState();
     });
 
-    it('Should successfuly sort products', async () => {
+    it('Should successfully sort products', async () => {
         //TODO the test case is completed, reporting logs are missing
         await loginAsStandardUser();
         const beforeSortingPrices = UtilsMethods.sortLowToHighValues(await inventoryPage.getTextFromPrices());

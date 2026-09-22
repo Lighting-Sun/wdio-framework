@@ -15,8 +15,8 @@ describe('product purchase scenarios', () => {
     it('Should add and validate multiple items added to cart', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
-        const inventoryNames = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
-        const inventoryPrices = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
+        const inventoryNames = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemName');
+        const inventoryPrices = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemPrice');
         await openCart();
         await cartPage.expectItemCartNames(inventoryNames);
         await cartPage.expectItemCartPrices(inventoryPrices);
@@ -24,7 +24,7 @@ describe('product purchase scenarios', () => {
 
     it('Should add and validate a single specific item to cart @smoke', async () => {
         await loginAsStandardUser();
-        const result = await inventoryPage.AddItemToCartByName(data.singleCartProduct);
+        const result = await inventoryPage.addItemToCartByName(data.singleCartProduct);
         await openCart();
         await cartPage.expectItemCartNames([result.itemName]);
         await cartPage.expectItemCartPrices([result.itemPrice]);

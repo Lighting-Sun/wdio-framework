@@ -23,9 +23,9 @@ const CLICK_ALL_PROBE_TIMEOUT = 2_000;
 
 export default class WdioFactoryUtils {
 
-    async click(objElement: Locator): Promise<void> {
-        const elementSelector = $(objElement.selector);
-        const elementDescription = objElement.description;
+    async click(element: Locator): Promise<void> {
+        const elementSelector = $(element.selector);
+        const elementDescription = element.description;
         await elementSelector.waitForClickable({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
         await elementSelector.click();
         allureReporter.addStep(`🥾 Clicked ${elementDescription}`);
@@ -38,50 +38,50 @@ export default class WdioFactoryUtils {
      * confusing "element not found", pointing at the page object rather than
      * at the bad input.
      */
-    async getSelectorByValue(objElement: Locator, strValue: string | number): Promise<Locator> {
-        const valueStr = String(strValue);
+    async getSelectorByValue(element: Locator, value: string | number): Promise<Locator> {
+        const valueStr = String(value);
 
-        if (!objElement.selector.includes(VALUE_PLACEHOLDER)) {
+        if (!element.selector.includes(VALUE_PLACEHOLDER)) {
             throw new Error(
-                `❌ Cannot substitute "${valueStr}": the locator for ${objElement.description} has no ${VALUE_PLACEHOLDER} placeholder. Selector: ${objElement.selector}`
+                `❌ Cannot substitute "${valueStr}": the locator for ${element.description} has no ${VALUE_PLACEHOLDER} placeholder. Selector: ${element.selector}`
             );
         }
 
         if (UNSAFE_VALUE_CHARS.test(valueStr)) {
             throw new Error(
-                `❌ Cannot substitute "${valueStr}" into the locator for ${objElement.description}: quote characters would produce an invalid selector.`
+                `❌ Cannot substitute "${valueStr}" into the locator for ${element.description}: quote characters would produce an invalid selector.`
             );
         }
 
         return {
-            selector: objElement.selector.replaceAll(VALUE_PLACEHOLDER, valueStr),
-            description: objElement.description.replaceAll(VALUE_PLACEHOLDER, valueStr),
+            selector: element.selector.replaceAll(VALUE_PLACEHOLDER, valueStr),
+            description: element.description.replaceAll(VALUE_PLACEHOLDER, valueStr),
         };
     }
 
-    async setValue(objElement: Locator, strValueToSend: string): Promise<void> {
-        const elementSelector = $(objElement.selector);
-        const elementDescription = objElement.description;
+    async setValue(element: Locator, valueToSend: string): Promise<void> {
+        const elementSelector = $(element.selector);
+        const elementDescription = element.description;
         await elementSelector.waitForEnabled({ timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.` });
-        await elementSelector.setValue(strValueToSend);
-        allureReporter.addStep(`⌨ Set ${elementDescription} to "${strValueToSend}"`);
+        await elementSelector.setValue(valueToSend);
+        allureReporter.addStep(`⌨ Set ${elementDescription} to "${valueToSend}"`);
     }
 
-    async getText(objElement: Locator): Promise<string> {
-        const elementSelector = $(objElement.selector);
-        const elementDescription = objElement.description;
+    async getText(element: Locator): Promise<string> {
+        const elementSelector = $(element.selector);
+        const elementDescription = element.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
         const textFromElement = await elementSelector.getText();
         allureReporter.addStep(`👀 Read ${elementDescription}: "${textFromElement}"`);
         return textFromElement;
     }
 
-    async getElements(objElements: Locator): Promise<WebdriverIO.Element[]> {
-        return (await $$(objElements.selector)) as unknown as WebdriverIO.Element[];
+    async getElements(elements: Locator): Promise<WebdriverIO.Element[]> {
+        return (await $$(elements.selector)) as unknown as WebdriverIO.Element[];
     }
 
-    async getTextFromElements(objElements: Locator): Promise<string[]> {
-        return await $$(objElements.selector).map(element => element.getText()) as unknown as Promise<string[]>;
+    async getTextFromElements(elements: Locator): Promise<string[]> {
+        return await $$(elements.selector).map(element => element.getText()) as unknown as Promise<string[]>;
     }
 
     /**
@@ -90,13 +90,13 @@ export default class WdioFactoryUtils {
      * `waitforTimeout` elapses. Use this instead of
      * `expect(await getText()).toEqual(...)`, which only checks once.
      */
-    async expectText(objElement: Locator, strExpectedText: string): Promise<void> {
-        await expect($(objElement.selector)).toHaveText(strExpectedText);
-        allureReporter.addStep(`✅ ${objElement.description} has text "${strExpectedText}"`);
+    async expectText(element: Locator, expectedText: string): Promise<void> {
+        await expect($(element.selector)).toHaveText(expectedText);
+        allureReporter.addStep(`✅ ${element.description} has text "${expectedText}"`);
     }
 
     /**
-     * Re-reads `readValues` until it matches `arrExpected`, then asserts once
+     * Re-reads `readValues` until it matches `expected`, then asserts once
      * more so a failure reports a readable diff rather than a bare `waitUntil`
      * timeout.
      *
@@ -105,51 +105,51 @@ export default class WdioFactoryUtils {
      * `expect(a).toEqual(b)` on two collected arrays reads the DOM once and
      * races whatever re-render the last action triggered.
      */
-    async expectEventuallyEquals<T>(strLabel: string, readValues: () => Promise<T[]>, arrExpected: T[]): Promise<void> {
+    async expectEventuallyEquals<T>(label: string, readValues: () => Promise<T[]>, expected: T[]): Promise<void> {
         let actualValues: T[] = [];
 
         await browser.waitUntil(
             async () => {
                 actualValues = await readValues();
-                return actualValues.length === arrExpected.length
-                    && actualValues.every((value, index) => value === arrExpected[index]);
+                return actualValues.length === expected.length
+                    && actualValues.every((value, index) => value === expected[index]);
             },
             {
                 timeout: TEXTS_RETRY_TIMEOUT,
-                timeoutMsg: `❌ ${strLabel} never matched the expected values.`,
+                timeoutMsg: `❌ ${label} never matched the expected values.`,
             }
         ).catch(() => undefined);
 
-        expect(actualValues).toEqual(arrExpected);
-        allureReporter.addStep(`✅ ${strLabel} matches ${arrExpected.length} expected value(s)`);
+        expect(actualValues).toEqual(expected);
+        allureReporter.addStep(`✅ ${label} matches ${expected.length} expected value(s)`);
     }
 
     /** Retrying equivalent of reading a group of elements and comparing their text. */
-    async expectTextsFromElements(objElements: Locator, arrExpectedTexts: string[]): Promise<void> {
+    async expectTextsFromElements(elements: Locator, expectedTexts: string[]): Promise<void> {
         await this.expectEventuallyEquals(
-            objElements.description,
-            () => this.getTextFromElements(objElements),
-            arrExpectedTexts
+            elements.description,
+            () => this.getTextFromElements(elements),
+            expectedTexts
         );
     }
 
-    async selectOptionFromSelect(objElement: Locator, strAttr: string, srtValue: string): Promise<void> {
-        const elementSelector = $(objElement.selector);
-        const elementDescription = objElement.description;
+    async selectOptionFromSelect(element: Locator, attribute: string, value: string): Promise<void> {
+        const elementSelector = $(element.selector);
+        const elementDescription = element.description;
         await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout.` });
-        await elementSelector.selectByAttribute(strAttr, srtValue);
-        allureReporter.addStep(`🔽 Selected "${srtValue}" in ${elementDescription}`);
+        await elementSelector.selectByAttribute(attribute, value);
+        allureReporter.addStep(`🔽 Selected "${value}" in ${elementDescription}`);
     }
 
-    async clickAllIfExists(objElement: Locator): Promise<void> {
-        let element = await $(objElement.selector);
-        let isClickable: boolean = await element.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
+    async clickAllIfExists(element: Locator): Promise<void> {
+        let probe = await $(element.selector);
+        let isClickable: boolean = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
 
         while (isClickable) {
-            await this.click(objElement);
-            element = await $(objElement.selector);
-            isClickable = await element.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
+            await this.click(element);
+            probe = await $(element.selector);
+            isClickable = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
         }
-        allureReporter.addStep(`🧹 Clicked every ${objElement.description} until none remained`);
+        allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained`);
     }
 }

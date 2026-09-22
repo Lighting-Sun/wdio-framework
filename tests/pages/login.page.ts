@@ -37,7 +37,7 @@ class LoginPage extends Page {
         await this.wdioFactory.setValue(this.locators.passwordInput, password);
     }
 
-    async clicklOnLoginBtn(): Promise<void> {
+    async clickOnLoginBtn(): Promise<void> {
         await this.wdioFactory.click(this.locators.loginButton);
     }
 
@@ -49,18 +49,18 @@ class LoginPage extends Page {
         return await this.wdioFactory.getText(this.locators.loginLogo);
     }
 
-    async expectLoginErrorMessage(strExpectedMessage: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.loginErrorMessage, strExpectedMessage);
+    async expectLoginErrorMessage(expectedMessage: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginErrorMessage, expectedMessage);
     }
 
-    async expectLoginLogoText(strExpectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.loginLogo, strExpectedText);
+    async expectLoginLogoText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginLogo, expectedText);
     }
 
-    async loginWithCredentials(srtUserName: string, strPassword: string): Promise<void> {
-        await this.fillUsername(srtUserName);
-        await this.fillPassword(strPassword);
-        await this.clicklOnLoginBtn();
+    async loginWithCredentials(username: string, password: string): Promise<void> {
+        await this.fillUsername(username);
+        await this.fillPassword(password);
+        await this.clickOnLoginBtn();
     }
 }
 

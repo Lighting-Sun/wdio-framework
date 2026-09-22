@@ -11,18 +11,18 @@ describe('login related scenarios', () => {
         await resetBrowserState();
     });
 
-    it('Should successfuly log in with a valid user @smoke', async () => {
+    it('Should successfully log in with a valid user @smoke', async () => {
         await loginPage.fillUsername(data.users.validUser.username);
         await loginPage.fillPassword(data.users.validUser.password);
-        await loginPage.clicklOnLoginBtn();
+        await loginPage.clickOnLoginBtn();
         await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
         await inventoryPage.header.expectPageTitle('Products');
     });
 
-    it('Should show an error when logging in with invalid user', async () => {
-        await loginPage.fillUsername(data.users.invalidUser.username);
-        await loginPage.fillPassword(data.users.invalidUser.password);
-        await loginPage.clicklOnLoginBtn();
+    it('Should show an error when logging in with a locked out user', async () => {
+        await loginPage.fillUsername(data.users.lockedOutUser.username);
+        await loginPage.fillPassword(data.users.lockedOutUser.password);
+        await loginPage.clickOnLoginBtn();
         await loginPage.expectLoginErrorMessage(data.loginErrorMessage);
     });
 

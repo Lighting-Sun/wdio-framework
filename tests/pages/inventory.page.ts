@@ -35,11 +35,11 @@ class Inventory extends Page {
      * Retrying comparison for the price list. The sort control triggers a
      * re-render, so a single read can still see the previous order.
      */
-    async expectTextFromPrices(arrExpectedPrices: string[]): Promise<void> {
+    async expectTextFromPrices(expectedPrices: string[]): Promise<void> {
         await this.wdioFactory.expectEventuallyEquals(
             'inventory item prices',
             () => this.getTextFromPrices(),
-            arrExpectedPrices
+            expectedPrices
         );
     }
 
@@ -48,16 +48,16 @@ class Inventory extends Page {
      * random selection: a failure here names the exact products involved and
      * re-runs identically.
      */
-    async addItemsToCartByNames(arrItemNames: string[]): Promise<ItemDetail[]> {
+    async addItemsToCartByNames(itemNames: string[]): Promise<ItemDetail[]> {
         const itemDetails: ItemDetail[] = [];
-        for (const itemName of arrItemNames) {
-            itemDetails.push(await this.AddItemToCartByName(itemName));
+        for (const itemName of itemNames) {
+            itemDetails.push(await this.addItemToCartByName(itemName));
         }
         return itemDetails;
     }
 
-    getProperyValuesFromArrayOfDetails(arrOfItemDetail: ItemDetail[], strPropertyToGet: keyof ItemDetail): string[] {
-        return arrOfItemDetail.map(detail => detail[strPropertyToGet]);
+    getPropertyValuesFromArrayOfDetails(itemDetails: ItemDetail[], propertyToGet: keyof ItemDetail): string[] {
+        return itemDetails.map(detail => detail[propertyToGet]);
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
@@ -75,7 +75,7 @@ class Inventory extends Page {
         await this.wdioFactory.click(selector);
     }
 
-    async AddItemToCartByName(value: string): Promise<ItemDetail> {
+    async addItemToCartByName(value: string): Promise<ItemDetail> {
         const itemNameText = await this.getInventoryItemNameByNameText(value);
         const itemPriceText = await this.getInventoryItemPriceByNameText(value);
         await this.clickInventoryItemAddToCartByName(value);

@@ -37,12 +37,12 @@ class OverviewPage extends Page {
         return await this.wdioFactory.getTextFromElements(this.locators.overviewItemNames);
     }
 
-    async expectItemOverviewNames(arrExpectedNames: string[]): Promise<void> {
-        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemNames, arrExpectedNames);
+    async expectItemOverviewNames(expectedNames: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemNames, expectedNames);
     }
 
-    async expectItemOverviewPrices(arrExpectedPrices: string[]): Promise<void> {
-        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemPrices, arrExpectedPrices);
+    async expectItemOverviewPrices(expectedPrices: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemPrices, expectedPrices);
     }
 
     async getSubTotalValue(): Promise<number> {

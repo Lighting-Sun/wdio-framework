@@ -12,7 +12,7 @@ class Header extends BaseComponent {
         },
         shoppingCartBtn: {
             selector: "#shopping_cart_container",
-            description: "username input field",
+            description: "shopping cart button in the header",
         },
         pageTitle: {
             selector: "span.title",
@@ -28,17 +28,17 @@ class Header extends BaseComponent {
         return await this.wdioFactoryUtils.getText(this.locators.pageTitle);
     }
 
-    async expectPageTitle(strExpectedTitle: string): Promise<void> {
-        await this.wdioFactoryUtils.expectText(this.locators.pageTitle, strExpectedTitle);
+    async expectPageTitle(expectedTitle: string): Promise<void> {
+        await this.wdioFactoryUtils.expectText(this.locators.pageTitle, expectedTitle);
     }
 
     async clickOnBurgerMenuBtn(): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
     }
 
-    async clickOnSortFilterDropdownOption(strValue: string): Promise<void> {
+    async clickOnSortFilterDropdownOption(value: string): Promise<void> {
         await this.wdioFactoryUtils.click(this.locators.sortFilterDropdown);
-        await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', strValue);
+        await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', value);
     }
 
     async clickOnShoppingCartBtn(): Promise<void> {
