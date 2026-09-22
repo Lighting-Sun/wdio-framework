@@ -1,7 +1,7 @@
 import loginPage from "../pages/login.page.js";
 import inventoryPage from "../pages/inventory.page.js";
 import { resetBrowserState } from "../support/session.support.js";
-import { readFileSync } from "fs";
+import data from "../data/placeHolderData.json" with { type: "json" };
 
 describe('login related scenarios', () => {
 
@@ -9,8 +9,6 @@ describe('login related scenarios', () => {
         await loginPage.openPage();
         await resetBrowserState();
     });
-
-    const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
 
     it('Should successfuly log in with a valid user @smoke', async () => {
         await loginPage.fillUsername(data.users.validUser.username);

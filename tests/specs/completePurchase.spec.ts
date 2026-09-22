@@ -5,7 +5,7 @@ import checkoutPage from "../pages/checkout.page.js";
 import overviewPage from "../pages/overview.page.js";
 import completePage from "../pages/complete.page.js";
 import { resetBrowserState } from "../support/session.support.js";
-import { readFileSync } from "fs";
+import data from "../data/placeHolderData.json" with { type: "json" };
 import UtilsMethods from "../utils/utilsMethods.utils.js";
 
 describe('complete purchase scenarios', () => {
@@ -14,8 +14,6 @@ describe('complete purchase scenarios', () => {
         await loginPage.openPage();
         await resetBrowserState();
     });
-
-    const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
 
     it('Should do a successful purchase', async () => {
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);

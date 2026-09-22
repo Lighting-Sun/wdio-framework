@@ -2,7 +2,7 @@ import loginPage from "../pages/login.page.js";
 import inventoryPage from "../pages/inventory.page.js";
 import cartPage from "../pages/cart.page.js";
 import { resetBrowserState } from "../support/session.support.js";
-import { readFileSync } from "fs";
+import data from "../data/placeHolderData.json" with { type: "json" };
 
 describe('product purchase scenarios', () => {
 
@@ -10,8 +10,6 @@ describe('product purchase scenarios', () => {
         await loginPage.openPage();
         await resetBrowserState();
     });
-
-    const data = JSON.parse(readFileSync('./tests/data/placeHolderData.json', 'utf-8'));
 
     it('Should add and validate multiple items added to cart', async () => {
         await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);

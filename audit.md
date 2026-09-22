@@ -11,7 +11,7 @@
 
 **Branch:** `fix/audit-critical-findings` · **Commits:** `d4f9fc0` (this document), `2913efd` (fixes)
 
-**Fixed — 6 findings:** #1, #3, #4, #6, #7, and #8 (the last was resolved as a side effect of rewriting the factory for #6/#7).
+**Fixed — 7 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), and #13.
 
 **Partially fixed — 2 findings:** #9 and #10. Details are in their sections; both still need work.
 
@@ -57,7 +57,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 10 | Brittle locators | High | ⚠ Partial |
 | 11 | String-template locators have no safety net | High | ⬜ Open |
 | 12 | Massive duplication in specs — no fixture layer | Medium | ⬜ Open |
-| 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ⬜ Open |
+| 13 | Test data read with `readFileSync`, untyped and cwd-dependent | Medium | ✅ Fixed |
 | 14 | Misleading names and typos | Medium | ⬜ Open |
 | 15 | Dead code | Medium | ⚠ Partial |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ⬜ Open |
@@ -295,7 +295,11 @@ Note this is **not** the same as a page object: a page object models a *page*, a
 
 ---
 
-### 13. Test data read with `readFileSync`, untyped and cwd-dependent
+### 13. Test data read with `readFileSync`, untyped and cwd-dependent ✅ Fixed
+
+> **Fixed in round 2.** Enabled `resolveJsonModule` and replaced the `readFileSync` + `JSON.parse` line in all four specs with `import data from "../data/placeHolderData.json" with { type: "json" };`.
+>
+> Verified both halves of the finding. **Typing:** a deliberate `data.users.vlaidUser` now fails `tsc` with `TS2551: Property 'vlaidUser' does not exist ... Did you mean 'validUser'?` instead of crashing at runtime. **Path independence:** loading the same file by module URL from an unrelated working directory succeeds, where the old `readFileSync('./tests/data/...')` fails with `ENOENT`.
 
 **Where:** `login.spec.ts:11` and the same line in all four specs
 
@@ -421,7 +425,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 **Round 2 — recommended next, in this order:**
 
-1. **#13 — typed test data.** Do this first because it is the cheapest safety net left: `resolveJsonModule` plus an `import` turns every `data.*` typo into a compile error instead of a runtime crash, and removes the cwd dependency. It also has to happen before #14, since renaming `invalidUser` without type checking means finding the missed call sites by running the suite.
+1. ~~**#13 — typed test data.**~~ ✅ **Done.** Do this first because it is the cheapest safety net left: `resolveJsonModule` plus an `import` turns every `data.*` typo into a compile error instead of a runtime crash, and removes the cwd dependency. It also has to happen before #14, since renaming `invalidUser` without type checking means finding the missed call sites by running the suite.
 2. **#11 — placeholder guard in `getSelectorByValue`.** Small, contained, and it protects the six XPath template locators that #10 left in place. Pairs naturally with #9's unbounded loop — both are "the helper fails in a way that misreports where the problem is."
 3. **#10 (remainder) + #15 (remainder).** Replace the `//div[text()='...']` locators with `data-test` equivalents and delete the three dead members. Grouped because they touch the same two files and the dead code *is* locator code.
 4. **#16 — the two latent bugs.** `reduce` without an initial value throws on an empty cart, and `sortLowToHighValues` mutates its argument. Both are real defects, not style; the `async`-without-`await` cleanup rides along.
