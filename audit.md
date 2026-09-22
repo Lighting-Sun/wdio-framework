@@ -20,7 +20,7 @@
 | 500cb94 | Round 2 — findings #11, #10, #15 |
 | 2237345 | Round 3 — findings #28, #21, #16 |
 | `6d48709` | Round 4 — finding #12 |
-| _pending_ | Round 4 — finding #14 |
+| 868f897 | Round 4 — finding #14 |
 
 **Fixed — 15 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #12, #13, #14, #15, #16, #21, and #28.
 
