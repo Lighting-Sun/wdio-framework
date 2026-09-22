@@ -10,8 +10,7 @@
         "types": [
             "node",
             "@wdio/globals/types",
-            "@wdio/mocha-framework",
-            "@wdio/visual-service"
+            "@wdio/mocha-framework"
         ]
     },
     "include": ["tests/**/*.ts", "wdio.conf.ts", "*.d.ts"],

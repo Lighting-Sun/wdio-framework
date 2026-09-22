@@ -1,4 +1,3 @@
-import path from "node:path";
 import allure from "allure-commandline";
 import allureReporter from "@wdio/allure-reporter";
 import fs from 'fs';
@@ -70,18 +69,6 @@ export const config = {
      */
     specFileRetries: SPEC_FILE_RETRIES,
     specFileRetriesDeferred: true,
-
-    services: [
-        [
-            "visual",
-            {
-                baselineFolder: path.join(process.cwd(), "tests/visual-testing", "baseline"),
-                formatImageName: "{tag}-{logName}-{width}x{height}",
-                screenshotPath: path.join(process.cwd(), "tmp"),
-                savePerInstance: true,
-            },
-        ],
-    ],
 
     framework: 'mocha',
 
