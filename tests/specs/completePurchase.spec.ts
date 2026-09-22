@@ -5,6 +5,7 @@ import checkoutPage from "../pages/checkout.page.js";
 import overviewPage from "../pages/overview.page.js";
 import completePage from "../pages/complete.page.js";
 import { resetBrowserState } from "../support/session.support.js";
+import { loginAsStandardUser, openCart } from "../support/flows.support.js";
 import data from "../data/placeHolderData.json" with { type: "json" };
 import UtilsMethods from "../utils/utilsMethods.utils.js";
 
@@ -16,15 +17,11 @@ describe('complete purchase scenarios', () => {
     });
 
     it('Should do a successful purchase', async () => {
-        await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
-        await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
-        await inventoryPage.header.expectPageTitle('Products');
+        await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
         const inventoryNames = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemName');
         const inventoryPrices = inventoryPage.getProperyValuesFromArrayOfDetails(result, 'itemPrice');
-        await inventoryPage.header.clickOnShoppingCartBtn();
-        await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
-        await cartPage.header.expectPageTitle('Your Cart');
+        await openCart();
         await cartPage.expectItemCartNames(inventoryNames);
         await cartPage.expectItemCartPrices(inventoryPrices);
         await cartPage.clickOnCheckoutButton();
