@@ -1,7 +1,7 @@
 # Handoff — WebdriverIO framework audit remediation
 
 **Written:** 2026-09-22
-**Branch:** `fix/audit-critical-findings` (12 commits ahead of `main`, **nothing pushed, nothing merged**)
+**Branch:** `fix/audit-critical-findings` (ahead of `main`; run `git log --oneline main..HEAD` for the current list — **nothing pushed, nothing merged**)
 **Working tree:** clean
 **Read first:** [audit.md](audit.md) — it is the plan, the spec, and the status tracker all at once.
 
