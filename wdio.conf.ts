@@ -1,11 +1,11 @@
-import allure from "allure-commandline";
-import allureReporter from "@wdio/allure-reporter";
+import allure from 'allure-commandline';
+import allureReporter from '@wdio/allure-reporter';
 import fs from 'fs';
-import yargs from "yargs";
+import yargs from 'yargs';
 
 const argv = yargs(process.argv.slice(2)).parseSync();
 
-const allureDir = "./reports/allure";
+const allureDir = './reports/allure';
 
 const selectedEnv = (argv['env'] as string | undefined) ?? 'qa';
 const environments: Record<string, string> = {
@@ -19,15 +19,15 @@ const browserCap: Record<string, object> = {
     chrome: {
         browserName: 'chrome',
         'goog:chromeOptions': {
-            args: ['headless', 'disable-gpu']
-        }
+            args: ['headless', 'disable-gpu'],
+        },
     },
     firefox: {
         browserName: 'firefox',
         'moz:firefoxOptions': {
-            args: ['-headless']
-        }
-    }
+            args: ['-headless'],
+        },
+    },
 };
 
 const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
@@ -37,20 +37,15 @@ const SPEC_FILE_RETRIES = 1;
 
 export const config: WebdriverIO.Config = {
     runner: 'local',
-    specs: [
-        './tests/specs/**/*.ts'
-    ],
+    specs: ['./tests/specs/**/*.ts'],
     suites: {
         regression: [
             './tests/specs/addProductsToCart.spec.ts',
             './tests/specs/completePurchase.spec.ts',
             './tests/specs/filter.spec.ts',
-            './tests/specs/login.spec.ts'
-        ],
-        loginAndPurchase: [
             './tests/specs/login.spec.ts',
-            './tests/specs/completePurchase.spec.ts'
-        ]
+        ],
+        loginAndPurchase: ['./tests/specs/login.spec.ts', './tests/specs/completePurchase.spec.ts'],
     },
     exclude: [],
     maxInstances: 10,
@@ -72,15 +67,21 @@ export const config: WebdriverIO.Config = {
 
     framework: 'mocha',
 
-    reporters: ['spec', ['allure', {
-        outputDir: allureDir + '/allure-results',
-        disableWebdriverStepsReporting: true,
-        disableWebdriverScreenshotsReporting: true,
-    }]],
+    reporters: [
+        'spec',
+        [
+            'allure',
+            {
+                outputDir: allureDir + '/allure-results',
+                disableWebdriverStepsReporting: true,
+                disableWebdriverScreenshotsReporting: true,
+            },
+        ],
+    ],
 
     mochaOpts: {
         ui: 'bdd',
-        timeout: 60000
+        timeout: 60000,
     },
 
     onPrepare: function () {
@@ -91,10 +92,10 @@ export const config: WebdriverIO.Config = {
                 console.log(`🗑 ${dir} is deleted`);
             }
         } catch {
-            console.log("⚠ error while deleting this dir");
+            console.log('⚠ error while deleting this dir');
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.log("✔ dir got created");
+                console.log('✔ dir got created');
             }
         }
     },
@@ -121,21 +122,21 @@ export const config: WebdriverIO.Config = {
         const screenshot = await browser.takeScreenshot();
         // Must be awaited: afterTest resolving before the attachment is written
         // can lose the screenshot during teardown, which is the whole point of #1.
-        await allureReporter.addAttachment(
-            'Screenshot on failure',
-            Buffer.from(screenshot, 'base64'),
-            'image/png'
-        );
+        await allureReporter.addAttachment('Screenshot on failure', Buffer.from(screenshot, 'base64'), 'image/png');
     },
 
     onComplete: function () {
         const timeOutTimer = 60_000;
         const reportError = new Error('Could not generate Allure report');
-        const generation = allure(['generate', allureDir + '/allure-results', '--clean', '-o', allureDir + '/allure-report']);
+        const generation = allure([
+            'generate',
+            allureDir + '/allure-results',
+            '--clean',
+            '-o',
+            allureDir + '/allure-report',
+        ]);
         return new Promise<void>((resolve, reject) => {
-            const generationTimeout = setTimeout(
-                () => reject(reportError),
-                timeOutTimer);
+            const generationTimeout = setTimeout(() => reject(reportError), timeOutTimer);
 
             generation.on('exit', function (exitCode: number) {
                 clearTimeout(generationTimeout);

@@ -1,5 +1,4 @@
 class UtilsMethods {
-
     /**
      * Returns a sorted COPY. `Array.prototype.sort` sorts in place, so sorting
      * the argument directly would silently reorder the caller's array.

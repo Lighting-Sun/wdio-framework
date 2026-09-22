@@ -10,25 +10,27 @@ class Inventory extends Page {
     locators = {
         inventoryItemPrice: {
             selector: "div[data-test='inventory-item-price']",
-            description: "inventory item price",
+            description: 'inventory item price',
         },
         inventoryItemNameByName: {
-            selector: "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-name']",
+            selector:
+                "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-name']",
             description: "inventory item name for '${value}'",
         },
         inventoryItemPriceByName: {
-            selector: "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-price']",
+            selector:
+                "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-price']",
             description: "inventory item price for '${value}'",
         },
         inventoryAddToCartButtonByName: {
             selector: "button[data-test='add-to-cart-${value}']",
             description: "add to cart button for '${value}'",
-        }
+        },
     };
 
     async getTextFromPrices(): Promise<string[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
-        return textFromPrices.map(textToTrim => textToTrim.slice(1));
+        return textFromPrices.map((textToTrim) => textToTrim.slice(1));
     }
 
     /**
@@ -39,7 +41,7 @@ class Inventory extends Page {
         await this.wdioFactory.expectEventuallyEquals(
             'inventory item prices',
             () => this.getTextFromPrices(),
-            expectedPrices
+            expectedPrices,
         );
     }
 
@@ -57,21 +59,30 @@ class Inventory extends Page {
     }
 
     getPropertyValuesFromArrayOfDetails(itemDetails: ItemDetail[], propertyToGet: keyof ItemDetail): string[] {
-        return itemDetails.map(detail => detail[propertyToGet]);
+        return itemDetails.map((detail) => detail[propertyToGet]);
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryItemNameByName,
+            UtilsMethods.toProductSlug(value),
+        );
         return await this.wdioFactory.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryItemPriceByName,
+            UtilsMethods.toProductSlug(value),
+        );
         return await this.wdioFactory.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value: string): Promise<void> {
-        const selector = this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, UtilsMethods.toProductSlug(value));
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryAddToCartButtonByName,
+            UtilsMethods.toProductSlug(value),
+        );
         await this.wdioFactory.click(selector);
     }
 

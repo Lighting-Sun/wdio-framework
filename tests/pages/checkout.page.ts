@@ -2,25 +2,24 @@ import Header from '../components/header.component.js';
 import Page from './page.js';
 
 class CheckoutPage extends Page {
-
     header = new Header();
 
     locators = {
         firstNameInput: {
-            selector: "#first-name",
-            description: "first name input",
+            selector: '#first-name',
+            description: 'first name input',
         },
         lastNameInput: {
-            selector: "#last-name",
-            description: "last name input",
+            selector: '#last-name',
+            description: 'last name input',
         },
         postalCodeInput: {
-            selector: "#postal-code",
-            description: "postal code input",
+            selector: '#postal-code',
+            description: 'postal code input',
         },
         continueButton: {
-            selector: "#continue",
-            description: "continue button",
+            selector: '#continue',
+            description: 'continue button',
         },
     };
 

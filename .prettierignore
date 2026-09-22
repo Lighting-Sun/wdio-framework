@@ -2,3 +2,12 @@ node_modules
 reports
 tmp
 package-lock.json
+
+# Prose and CI config are left alone deliberately.
+#
+# audit.md and HANDOFF.md carry hand-aligned tables that are read far more
+# often than they are edited, and reformatting them would churn every future
+# diff on the two documents this work is tracked in. Workflow YAML formatting
+# is not code style, and reflowing it obscures real changes in review.
+*.md
+.github

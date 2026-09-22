@@ -1,12 +1,11 @@
-import loginPage from "../pages/login.page.js";
-import inventoryPage from "../pages/inventory.page.js";
-import cartPage from "../pages/cart.page.js";
-import { resetBrowserState } from "../support/session.support.js";
-import { loginAsStandardUser, openCart } from "../support/flows.support.js";
-import data from "../data/placeHolderData.json" with { type: "json" };
+import loginPage from '../pages/login.page.js';
+import inventoryPage from '../pages/inventory.page.js';
+import cartPage from '../pages/cart.page.js';
+import { resetBrowserState } from '../support/session.support.js';
+import { loginAsStandardUser, openCart } from '../support/flows.support.js';
+import data from '../data/placeHolderData.json' with { type: 'json' };
 
 describe('product purchase scenarios', () => {
-
     beforeEach(async () => {
         await loginPage.openPage();
         await resetBrowserState();

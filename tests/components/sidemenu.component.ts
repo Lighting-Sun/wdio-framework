@@ -1,13 +1,12 @@
-import BaseComponent from "./base.component.js";
-import type { Locator } from "../utils/wdioFactory.utils.js";
+import BaseComponent from './base.component.js';
+import type { Locator } from '../utils/wdioFactory.utils.js';
 
 class SideMenu extends BaseComponent {
-
     locators = {
         sideMenuOption: {
             selector: "a[data-test='${value}-sidebar-link']",
-            description: "side menu option '${value}'"
-        }
+            description: "side menu option '${value}'",
+        },
     };
 
     getSideMenuOptionByValue(value: string): Locator {

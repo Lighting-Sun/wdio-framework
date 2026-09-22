@@ -1,11 +1,10 @@
-import loginPage from "../pages/login.page.js";
-import inventoryPage from "../pages/inventory.page.js";
-import { resetBrowserState } from "../support/session.support.js";
-import { loginAsStandardUser } from "../support/flows.support.js";
-import data from "../data/placeHolderData.json" with { type: "json" };
+import loginPage from '../pages/login.page.js';
+import inventoryPage from '../pages/inventory.page.js';
+import { resetBrowserState } from '../support/session.support.js';
+import { loginAsStandardUser } from '../support/flows.support.js';
+import data from '../data/placeHolderData.json' with { type: 'json' };
 
 describe('login related scenarios', () => {
-
     beforeEach(async () => {
         await loginPage.openPage();
         await resetBrowserState();

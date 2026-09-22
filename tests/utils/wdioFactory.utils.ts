@@ -1,4 +1,4 @@
-import allureReporter from "@wdio/allure-reporter";
+import allureReporter from '@wdio/allure-reporter';
 
 export interface Locator {
     selector: string;
@@ -22,11 +22,12 @@ const TEXTS_RETRY_TIMEOUT = 10_000;
 const CLICK_ALL_PROBE_TIMEOUT = 2_000;
 
 export default class WdioFactoryUtils {
-
     async click(element: Locator): Promise<void> {
         const elementSelector = $(element.selector);
         const elementDescription = element.description;
-        await elementSelector.waitForClickable({ timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.` });
+        await elementSelector.waitForClickable({
+            timeoutMsg: `❌ ${elementDescription} was not clickable before timeout.`,
+        });
         await elementSelector.click();
         await allureReporter.addStep(`🥾 Clicked ${elementDescription}`);
     }
@@ -43,13 +44,13 @@ export default class WdioFactoryUtils {
 
         if (!element.selector.includes(VALUE_PLACEHOLDER)) {
             throw new Error(
-                `❌ Cannot substitute "${valueStr}": the locator for ${element.description} has no ${VALUE_PLACEHOLDER} placeholder. Selector: ${element.selector}`
+                `❌ Cannot substitute "${valueStr}": the locator for ${element.description} has no ${VALUE_PLACEHOLDER} placeholder. Selector: ${element.selector}`,
             );
         }
 
         if (UNSAFE_VALUE_CHARS.test(valueStr)) {
             throw new Error(
-                `❌ Cannot substitute "${valueStr}" into the locator for ${element.description}: quote characters would produce an invalid selector.`
+                `❌ Cannot substitute "${valueStr}" into the locator for ${element.description}: quote characters would produce an invalid selector.`,
             );
         }
 
@@ -62,7 +63,9 @@ export default class WdioFactoryUtils {
     async setValue(element: Locator, valueToSend: string): Promise<void> {
         const elementSelector = $(element.selector);
         const elementDescription = element.description;
-        await elementSelector.waitForEnabled({ timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.` });
+        await elementSelector.waitForEnabled({
+            timeoutMsg: `❌ ${elementDescription} was not enabled before timeout.`,
+        });
         await elementSelector.setValue(valueToSend);
         await allureReporter.addStep(`⌨ Set ${elementDescription} to "${valueToSend}"`);
     }
@@ -70,7 +73,9 @@ export default class WdioFactoryUtils {
     async getText(element: Locator): Promise<string> {
         const elementSelector = $(element.selector);
         const elementDescription = element.description;
-        await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout` });
+        await elementSelector.waitForDisplayed({
+            timeoutMsg: `❌ ${elementDescription} was not visible before timeout`,
+        });
         const textFromElement = await elementSelector.getText();
         await allureReporter.addStep(`👀 Read ${elementDescription}: "${textFromElement}"`);
         return textFromElement;
@@ -91,7 +96,7 @@ export default class WdioFactoryUtils {
     }
 
     async getTextFromElements(elements: Locator): Promise<string[]> {
-        return await $$(elements.selector).map(element => element.getText()) as unknown as Promise<string[]>;
+        return (await $$(elements.selector).map((element) => element.getText())) as unknown as Promise<string[]>;
     }
 
     /**
@@ -118,17 +123,21 @@ export default class WdioFactoryUtils {
     async expectEventuallyEquals<T>(label: string, readValues: () => Promise<T[]>, expected: T[]): Promise<void> {
         let actualValues: T[] = [];
 
-        await browser.waitUntil(
-            async () => {
-                actualValues = await readValues();
-                return actualValues.length === expected.length
-                    && actualValues.every((value, index) => value === expected[index]);
-            },
-            {
-                timeout: TEXTS_RETRY_TIMEOUT,
-                timeoutMsg: `❌ ${label} never matched the expected values.`,
-            }
-        ).catch(() => undefined);
+        await browser
+            .waitUntil(
+                async () => {
+                    actualValues = await readValues();
+                    return (
+                        actualValues.length === expected.length &&
+                        actualValues.every((value, index) => value === expected[index])
+                    );
+                },
+                {
+                    timeout: TEXTS_RETRY_TIMEOUT,
+                    timeoutMsg: `❌ ${label} never matched the expected values.`,
+                },
+            )
+            .catch(() => undefined);
 
         expect(actualValues).toEqual(expected);
         await allureReporter.addStep(`✅ ${label} matches ${expected.length} expected value(s)`);
@@ -139,14 +148,16 @@ export default class WdioFactoryUtils {
         await this.expectEventuallyEquals(
             elements.description,
             () => this.getTextFromElements(elements),
-            expectedTexts
+            expectedTexts,
         );
     }
 
     async selectOptionFromSelect(element: Locator, attribute: string, value: string): Promise<void> {
         const elementSelector = $(element.selector);
         const elementDescription = element.description;
-        await elementSelector.waitForDisplayed({ timeoutMsg: `❌ ${elementDescription} was not visible before timeout.` });
+        await elementSelector.waitForDisplayed({
+            timeoutMsg: `❌ ${elementDescription} was not visible before timeout.`,
+        });
         await elementSelector.selectByAttribute(attribute, value);
         await allureReporter.addStep(`🔽 Selected "${value}" in ${elementDescription}`);
     }
@@ -164,20 +175,21 @@ export default class WdioFactoryUtils {
 
         for (let clicks = 0; clicks < initialCount; clicks++) {
             const probe = $(element.selector);
-            const isClickable: boolean = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
-            if (!isClickable) { break; }
+            const isClickable: boolean = await probe
+                .waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT })
+                .catch(() => false);
+            if (!isClickable) {
+                break;
+            }
             await this.click(element);
         }
 
         // Clicking the last element and the DOM dropping it are not the same
         // instant, so settle rather than counting straight away.
-        await browser.waitUntil(
-            async () => (await this.getElements(element)).length === 0,
-            {
-                timeout: CLICK_ALL_PROBE_TIMEOUT,
-                timeoutMsg: `❌ ${element.description}: ${initialCount} were present and each was clicked, but some remain. A click is not removing its element.`,
-            }
-        );
+        await browser.waitUntil(async () => (await this.getElements(element)).length === 0, {
+            timeout: CLICK_ALL_PROBE_TIMEOUT,
+            timeoutMsg: `❌ ${element.description}: ${initialCount} were present and each was clicked, but some remain. A click is not removing its element.`,
+        });
         await allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained (${initialCount})`);
     }
 }

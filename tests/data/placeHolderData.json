@@ -1,20 +1,16 @@
 {
     "users": {
-        "validUser":{
-            "username":"standard_user",
-            "password":"secret_sauce"
+        "validUser": {
+            "username": "standard_user",
+            "password": "secret_sauce"
         },
-        "lockedOutUser":{
-            "username":"locked_out_user",
-            "password":"secret_sauce"
+        "lockedOutUser": {
+            "username": "locked_out_user",
+            "password": "secret_sauce"
         }
     },
-    "loginErrorMessage":"Epic sadface: Sorry, this user has been locked out.",
-    "cartProducts": [
-        "Sauce Labs Backpack",
-        "Sauce Labs Bike Light",
-        "Sauce Labs Onesie"
-    ],
+    "loginErrorMessage": "Epic sadface: Sorry, this user has been locked out.",
+    "cartProducts": ["Sauce Labs Backpack", "Sauce Labs Bike Light", "Sauce Labs Onesie"],
     "singleCartProduct": "Sauce Labs Onesie",
     "personalInfo": {
         "firstName": "Tester",

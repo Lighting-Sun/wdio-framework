@@ -1,27 +1,26 @@
 import Page from './page.js';
 
 class LoginPage extends Page {
-
     locators = {
         loginButton: {
-            selector: "#login-button",
-            description: "login button for the saucedemo application",
+            selector: '#login-button',
+            description: 'login button for the saucedemo application',
         },
         usernameInput: {
             selector: "input[data-test='username']",
-            description: "username input field",
+            description: 'username input field',
         },
         passwordInput: {
             selector: "input[data-test='password']",
-            description: "password input field",
+            description: 'password input field',
         },
         loginErrorMessage: {
             selector: "h3[data-test='error']",
-            description: "login error message",
+            description: 'login error message',
         },
         loginLogo: {
-            selector: "div.login_logo",
-            description: "Swag Labs logo in login page",
+            selector: 'div.login_logo',
+            description: 'Swag Labs logo in login page',
         },
     };
 

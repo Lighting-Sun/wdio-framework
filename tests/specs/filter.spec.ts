@@ -1,11 +1,10 @@
-import loginPage from "../pages/login.page.js";
-import inventoryPage from "../pages/inventory.page.js";
-import UtilsMethods from "../utils/utilsMethods.utils.js";
-import { resetBrowserState } from "../support/session.support.js";
-import { loginAsStandardUser } from "../support/flows.support.js";
+import loginPage from '../pages/login.page.js';
+import inventoryPage from '../pages/inventory.page.js';
+import UtilsMethods from '../utils/utilsMethods.utils.js';
+import { resetBrowserState } from '../support/session.support.js';
+import { loginAsStandardUser } from '../support/flows.support.js';
 
 describe('product sorting scenarios', () => {
-
     beforeEach(async () => {
         await loginPage.openPage();
         await resetBrowserState();
