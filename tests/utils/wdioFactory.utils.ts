@@ -141,15 +141,33 @@ export default class WdioFactoryUtils {
         allureReporter.addStep(`🔽 Selected "${value}" in ${elementDescription}`);
     }
 
+    /**
+     * Clicks every element matching the locator, assuming each click removes the
+     * element it hit.
+     *
+     * The loop is bounded by the number of elements present when it starts. An
+     * unbounded loop spins until the Mocha timeout whenever a click fails to
+     * remove its element, reporting a 60s timeout instead of the real problem.
+     */
     async clickAllIfExists(element: Locator): Promise<void> {
-        let probe = await $(element.selector);
-        let isClickable: boolean = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
+        const initialCount = (await this.getElements(element)).length;
 
-        while (isClickable) {
+        for (let clicks = 0; clicks < initialCount; clicks++) {
+            const probe = $(element.selector);
+            const isClickable: boolean = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
+            if (!isClickable) { break; }
             await this.click(element);
-            probe = await $(element.selector);
-            isClickable = await probe.waitForClickable({ timeout: CLICK_ALL_PROBE_TIMEOUT }).catch(() => false);
         }
-        allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained`);
+
+        // Clicking the last element and the DOM dropping it are not the same
+        // instant, so settle rather than counting straight away.
+        await browser.waitUntil(
+            async () => (await this.getElements(element)).length === 0,
+            {
+                timeout: CLICK_ALL_PROBE_TIMEOUT,
+                timeoutMsg: `❌ ${element.description}: ${initialCount} were present and each was clicked, but some remain. A click is not removing its element.`,
+            }
+        );
+        allureReporter.addStep(`🧹 Clicked every ${element.description} until none remained (${initialCount})`);
     }
 }
