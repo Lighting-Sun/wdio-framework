@@ -11,7 +11,7 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). It was audited, producing 27 findings; two more (#28, #29) were discovered while fixing them. Fixes are being applied in priority order, in rounds.
 
-**15 of 29 findings are fixed. 2 are deferred by the owner's explicit decision. 3 remain open.**
+**Of 29 findings: 15 fixed, 2 deferred by the owner's explicit decision, 1 partially fixed (#9), 11 open.**
 
 `audit.md` carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. **Keep it current** — it is how the next session knows where things stand. Every fix round has been two commits: one `fix:`/`refactor:` for the code, one `docs:` updating the audit.
 
@@ -73,13 +73,17 @@ The most valuable thing to work on: a flaky suite erodes trust faster than a mis
 
 **Next steps, in order:** loop with `--logLevel debug` and keep the worker log from a failing run; try `maxInstances: 2` to test the contention theory; check whether `@wdio/visual-service` (configured but unused — finding #20) participates in session setup.
 
+### #9 (remainder) — unbounded loop in `clickAllIfExists` (High)
+
+The magic `1000` became a named constant, but the `while` loop is still unbounded: a click that never removes its element spins until the Mocha timeout. Count the elements first, loop that many times, then assert zero remain.
+
 ### #17 — sort coverage and the stale architecture doc (Medium)
 
 `filter.spec.ts` tests only `lohi`; add `hilo`, `az`, `za` as a data-driven loop. Then fix [architecture/projectArchitecture.md](architecture/projectArchitecture.md), which is **actively wrong**: it claims four sort options are covered and still refers to `.js` files that became `.ts` before this work began. It also predates the `tests/support/` layer entirely.
 
 ### #18–20, #22–27 — tooling (Low)
 
-`#18` (ESLint + Prettier) is worth pulling forward: it would have caught the variable shadowing described below before `tsc` did, and the README already tells contributors to install both extensions even though no config exists. The rest — untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
+`#18` (ESLint + Prettier) is worth pulling forward — the audit ranks it second, above #9: it would have caught the variable shadowing described below before `tsc` did, and the README already tells contributors to install both extensions even though no config exists. The rest — untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
 
 ---
 

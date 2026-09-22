@@ -17,10 +17,10 @@
 | `2913efd` | Round 1 — findings #1, #3, #4, #6, #7, #8 |
 | `0df9a27` | Progress tracking added to this document |
 | `e330547` | Round 2 — finding #13 |
-| 500cb94 | Round 2 — findings #11, #10, #15 |
-| 2237345 | Round 3 — findings #28, #21, #16 |
+| `500cb94` | Round 2 — findings #11, #10, #15 |
+| `2237345` | Round 3 — findings #28, #21, #16 |
 | `6d48709` | Round 4 — finding #12 |
-| 868f897 | Round 4 — finding #14 |
+| `868f897` | Round 4 — finding #14 |
 
 **Fixed — 15 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #12, #13, #14, #15, #16, #21, and #28.
 
@@ -28,12 +28,15 @@
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
-**Verification at the time of the fix commit:**
+**Two findings were discovered while fixing the others:** #28 (fixed) and #29 (open). The audit therefore runs to 29, not the original 27.
+
+**Current verification state** — re-checked at the end of round 4:
 
 - `npx tsc --noEmit` — clean.
 - Full suite — 4 spec files, 8 tests passing (was 7; a cart-removal test was added).
-- A deliberately broken assertion produced 2 PNG attachments and retried before failing, confirming #1 and #6.
-- Allure results went from 109 `.txt` attachment files to 0, confirming #7.
+- Green across repeated consecutive runs, with the exception recorded in #29.
+
+Each round's own evidence is in its commit message and in the status note on its finding.
 
 Each finding says *what* is wrong, *why* it matters, and *what to do about it*.
 
@@ -402,7 +405,7 @@ Two real bugs in the same file:
 
 ---
 
-### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale
+### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale ⬜ Open
 
 `tests/specs/filter.spec.ts` tests only `lohi`. The architecture doc (`architecture/projectArchitecture.md`) claims it covers "all four product sort options" — **the doc is already out of date**, and it still refers to `.js` files that were converted to `.ts` in the most recent commit.
 
@@ -512,17 +515,22 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Round 1 — done (`2913efd`):** #1, #3, #4, #6, #7, #8.
+**✅ Done — rounds 1 to 4:**
 
-**Round 2 — recommended next, in this order:**
+| Round | Commit | Findings |
+|-------|--------|----------|
+| 1 | `2913efd` | #1, #3, #4, #6, #7, #8 |
+| 2 | `e330547`, `500cb94` | #13, #11, #10, #15 |
+| 3 | `2237345` | #28, #21, #16 |
+| 4 | `6d48709`, `868f897` | #12, #14 |
 
-1. ~~**#13 — typed test data.**~~ ✅ **Done.** Do this first because it is the cheapest safety net left: `resolveJsonModule` plus an `import` turns every `data.*` typo into a compile error instead of a runtime crash, and removes the cwd dependency. It also has to happen before #14, since renaming `invalidUser` without type checking means finding the missed call sites by running the suite.
-2. **#11 — placeholder guard in `getSelectorByValue`.** Small, contained, and it protects the six XPath template locators that #10 left in place. Pairs naturally with #9's unbounded loop — both are "the helper fails in a way that misreports where the problem is."
-3. **#10 (remainder) + #15 (remainder).** Replace the `//div[text()='...']` locators with `data-test` equivalents and delete the three dead members. Grouped because they touch the same two files and the dead code *is* locator code.
-4. **#16 — the two latent bugs.** `reduce` without an initial value throws on an empty cart, and `sortLowToHighValues` mutates its argument. Both are real defects, not style; the `async`-without-`await` cleanup rides along.
-5. **#12 + #14 — fixtures and naming.** Largest diff, lowest risk, and best done last so it lands on top of settled code. `tests/support/` already exists from the #3 fix, so #12 is an extension rather than a new layer.
-6. **#17 — sort coverage and the stale architecture doc.** New coverage, so it belongs after the refactors it would otherwise conflict with.
-7. **#18–27 — tooling.** ESLint/Prettier (#18) is worth pulling forward if more than one person is about to touch this repo; the rest can trickle in.
+**Recommended next, in this order:**
+
+1. **#29 — the rare `filter.spec` failure under parallel load.** Highest value remaining: a flaky suite erodes trust faster than any missing feature, and this one is already costing investigation time. The finding lists three concrete next steps.
+2. **#18 — ESLint and Prettier.** Worth pulling forward. It would have caught the variable shadowing that #14's rename introduced, before `tsc` did, and the README already instructs contributors to install both extensions even though no config exists.
+3. **#9 (remainder) — the unbounded loop in `clickAllIfExists`.** The magic number is gone; a click that never removes its element still spins until the Mocha timeout.
+4. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
+5. **#19, #20, #22–#27 — the rest of the tooling.** Untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
 
 **🕓 Deferred to a future pass:**
 
