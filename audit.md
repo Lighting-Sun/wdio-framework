@@ -22,8 +22,9 @@
 | `6d48709` | Round 4 — finding #12 |
 | `868f897` | Round 4 — finding #14 |
 | `2dbff97` | Round 5 — finding #9; #29 diagnosed |
+| `a208a0a` | Round 6 — finding #20; #29 narrowed |
 
-**Fixed — 16 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #21, and #28.
+**Fixed — 17 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #20, #21, and #28.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
@@ -75,9 +76,9 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
-| 18–27 | Tooling and hygiene | Low | ⬜ Open (#21 ✅ Fixed) |
+| 18–27 | Tooling and hygiene | Low | ⬜ Open (#20, #21 ✅ Fixed) |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
-| 29 | `filter.spec` fails rarely under parallel load, before the test body runs | High | ⬜ Open — root cause identified |
+| 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -441,7 +442,9 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 ---
 
-### 29. `filter.spec` fails rarely under parallel load, before the test body runs ⬜ Open — root cause identified
+### 29. A worker process crashes rarely during startup under parallel load ⬜ Open — root cause identified
+
+*(Originally filed as a `filter.spec` failure. Round 6 showed any spec can be the victim — see below.)*
 
 > **Round 5 — diagnosed, not yet fixed.** A 40-run debug loop reproduced it once (run 19 of 40) and captured the worker logs. **The worker process crashes; the test never fails.**
 >
@@ -471,6 +474,16 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 > **The `retried 2x` anomaly reproduced** in this capture (`FAILED … (2 retries)` against a budget of 1). It now correlates with the crash path rather than appearing at random, which makes it a lead rather than the arithmetic puzzle recorded below.
 >
 > **Next experiments, cheapest first:** remove `@wdio/visual-service` (finding #20 — configured, entirely unused, and loaded immediately before the crash point) and re-run the 40-run loop; then `maxInstances: 2` to test the contention hypothesis directly. A run of 40 takes roughly four minutes.
+>
+> **Round 6 — `@wdio/visual-service` is ruled out, and the finding's title is wrong.**
+>
+> The service was removed (finding #20) and the same 40-run loop re-run. **It crashed again at the same rate — 1 of 40 — with the identical exit code `3221226505` and the identical truncation point,** after `Using Chromedriver … from cache directory` and before `Started Chromedriver … on port`. The `initialize service "visual"` line is absent from the new capture, confirming the removal took effect. So the visual service is not in the crash path. Removing it was still correct on its own merits; it just is not the fix.
+>
+> **The more important result: a different spec crashed.** Round 6's casualty was `login.spec` on worker 0-3, not `filter.spec`. Same signature, same 424-byte truncated log, same missing `wdio-chrome-0-3-*` profile directory, same `retried 2x` anomaly.
+>
+> **This finding is therefore misnamed.** There is nothing special about `filter.spec` — the crash takes whichever worker loses the startup race. Any spec can be the victim, and the rate is per-run, not per-spec. Do not go looking for a cause inside any individual spec file.
+>
+> **Next experiment:** `maxInstances: 2`. That is now the only untested item from the original list, and it targets the startup race directly.
 
 **Found during round 4. Not caused by the round-4 changes — a failure with the same signature occurred back in round 2, before them.**
 
@@ -503,7 +516,11 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 `wdio.conf.ts:35` is `export const config = {...}` with no annotation. Typing it as `WebdriverIO.Config` gives autocomplete and catches typo'd keys at compile time. It also removes the need for `'error' as const` on line 56.
 
-### 20. Visual testing service is configured but unused
+### 20. Visual testing service is configured but unused ✅ Fixed
+
+> **Fixed in `a208a0a`.** The owner confirmed visual testing is out of scope, so the capability was dropped rather than wired up. Verified before removing: no call to `checkScreen`, `checkElement`, `checkFullPageScreen`, `saveScreen` or `saveElement` anywhere; `tests/visual-testing/` did not exist on disk, so no baseline had ever been taken. Removed the service block, its orphaned `node:path` import, the tsconfig `types` entry, the devDependency, and the dead `.gitignore` line.
+>
+> **This did not fix #29.** The service loaded immediately before the crash point, which made it the cheapest suspect; a 40-run loop after removal crashed at the same rate with the same signature. Ruled out.
 
 `wdio.conf.ts:62-72` loads `@wdio/visual-service`, but no test calls `checkScreen` or `checkElement`. Worse, `.gitignore:3` ignores `tests/visual-testing`, so **baselines can never be committed** and visual testing could never pass in CI regardless. Either write visual tests and un-ignore the baseline folder, or drop the dependency.
 
@@ -545,7 +562,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 5:**
+**✅ Done — rounds 1 to 6:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -554,13 +571,14 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 3 | `2237345` | #28, #21, #16 |
 | 4 | `6d48709`, `868f897` | #12, #14 |
 | 5 | `2dbff97` | #9; #29 diagnosed, not fixed |
+| 6 | `a208a0a` | #20; #29 narrowed — visual service ruled out |
 
 **Recommended next, in this order:**
 
-1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. Cheapest next experiment is removing `@wdio/visual-service` — see #20, which this now makes a candidate fix rather than only a cleanup — then re-running the 40-run loop. After that, `maxInstances: 2`.
+1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. Note the crash is not specific to any spec file — do not go hunting inside one.
 2. **#18 — ESLint and Prettier.** Worth pulling forward. It would have caught the variable shadowing that #14's rename introduced, before `tsc` did, and the README already instructs contributors to install both extensions even though no config exists. Pair it with **#24**, so the lint and typecheck scripts actually run in CI rather than being config nobody enforces.
 3. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
-4. **#19, #20, #22–#27 — the rest of the tooling.** Untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
+4. **#19, #22–#27 — the rest of the tooling.** Untyped config object, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
 
 **🕓 Deferred to a future pass:**
 

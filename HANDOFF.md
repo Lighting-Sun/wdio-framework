@@ -11,7 +11,7 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). It was audited, producing 27 findings; two more (#28, #29) were discovered while fixing them. Fixes are being applied in priority order, in rounds.
 
-**Of 29 findings: 16 fixed, 2 deferred by the owner's explicit decision, 11 open** (one of those, #29, is diagnosed but not yet fixed).
+**Of 29 findings: 17 fixed, 2 deferred by the owner's explicit decision, 10 open** (one of those, #29, is diagnosed and narrowed but not yet fixed).
 
 `audit.md` carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. **Keep it current** — it is how the next session knows where things stand. Every fix round has been two commits: one `fix:`/`refactor:` for the code, one `docs:` updating the audit.
 
@@ -59,7 +59,7 @@ Runner is **tsx** (not ts-node). Node 24 locally, CI pins 20.17.0. Chrome runs h
 
 ## What remains
 
-### #29 — worker process crashes during startup (High, **recommended next**)
+### #29 — a worker process crashes during startup (High, **recommended next**)
 
 **Round 5 found the root cause. It is not a test bug and not an assertion failure — the worker process dies.**
 
@@ -73,14 +73,17 @@ DEBUG @wdio/local-runner: Runner 0-2 finished with exit code 3221226505
 
 The crashed worker's log stops after `Using Chromedriver … from cache directory` and never reaches `Started Chromedriver … on port` or `POST /session`, while healthy workers in the same run reach both. The crashed worker also left no `wdio-chrome-0-2-*` profile directory, though its own chromedriver log shows the driver starting fine. So the driver came up and the worker died around it, ~750 ms in.
 
-**This fully explains the missing Allure result and missing screenshot** — `afterTest` cannot run in a process that no longer exists. `filter.spec` is a victim of worker ordering, not a cause; there is nothing to fix in the spec.
+**This fully explains the missing Allure result and missing screenshot** — `afterTest` cannot run in a process that no longer exists. The spec that reports the failure is a victim of worker ordering, not a cause; there is nothing to fix in it.
 
 **Still unknown:** the crash mechanism. All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis.
 
-**Next experiments, cheapest first:**
+**Round 6 ruled out the visual service, and renamed the problem.**
 
-1. Remove `@wdio/visual-service` (finding #20 — configured, entirely unused, and loaded immediately before the crash point) and re-run the 40-run loop. This makes #20 a candidate *fix*, not just a cleanup.
-2. `maxInstances: 2`, to test the contention hypothesis directly.
+`@wdio/visual-service` was removed (#20) and the loop re-run: **crashed again, 1 of 40, identical exit code and identical truncation point.** Not the cause. Removing it was still right on its own merits.
+
+**The crash is not specific to `filter.spec`.** Round 6's casualty was `login.spec` on worker 0-3 — same signature, same truncated log, same missing profile dir, same `retried 2x`. The crash takes whichever worker loses the startup race. **Do not go hunting for a cause inside any individual spec file.**
+
+**Remaining untested experiment:** `maxInstances: 2`.
 
 A 40-run loop takes about four minutes. The script is worth recreating: run the full suite in a loop with `--logLevel debug --outputDir <per-run dir>`, and keep the logs only from runs that exit non-zero.
 
@@ -90,11 +93,11 @@ A 40-run loop takes about four minutes. The script is worth recreating: run the 
 
 `filter.spec.ts` tests only `lohi`; add `hilo`, `az`, `za` as a data-driven loop. Then fix [architecture/projectArchitecture.md](architecture/projectArchitecture.md), which is **actively wrong**: it claims four sort options are covered and still refers to `.js` files that became `.ts` before this work began. It also predates the `tests/support/` layer entirely.
 
-### #18–20, #22–27 — tooling (Low)
+### #18–19, #22–27 — tooling (Low)
 
 `#18` (ESLint + Prettier) is worth pulling forward — the audit ranks it second: it would have caught the variable shadowing described below before `tsc` did, and the README already tells contributors to install both extensions even though no config exists. Pair it with `#24`, so the lint and typecheck scripts actually run in CI rather than being config nobody enforces. Expect a large mechanical diff across every file — keep it in its own commit so the substantive rounds stay reviewable.
 
-`#20` is no longer only a cleanup: the unused visual service loads immediately before the point where the #29 worker crash happens, so removing it is the cheapest experiment on that finding. The rest — untyped config object, `logLevel`, Node version pinning, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
+`#20` is done — the unused visual service was dropped in round 6 (visual testing is out of scope, per the owner). The rest — untyped config object, `logLevel`, Node version pinning, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
 
 ---
 
