@@ -21,20 +21,19 @@
 | `2237345` | Round 3 — findings #28, #21, #16 |
 | `6d48709` | Round 4 — finding #12 |
 | `868f897` | Round 4 — finding #14 |
+| `2dbff97` | Round 5 — finding #9; #29 diagnosed |
 
-**Fixed — 15 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #10, #11, #12, #13, #14, #15, #16, #21, and #28.
-
-**Partially fixed — 1 finding:** #9. The magic number is gone; the unbounded loop is not.
+**Fixed — 16 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #21, and #28.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
 **Two findings were discovered while fixing the others:** #28 (fixed) and #29 (open). The audit therefore runs to 29, not the original 27.
 
-**Current verification state** — re-checked at the end of round 4:
+**Current verification state** — re-checked at the end of round 5:
 
 - `npx tsc --noEmit` — clean.
 - Full suite — 4 spec files, 8 tests passing (was 7; a cart-removal test was added).
-- Green across repeated consecutive runs, with the exception recorded in #29.
+- Green across 39 of 40 consecutive full-suite runs. The single failure is #29, now diagnosed as a worker-process crash during startup rather than anything in the test code.
 
 Each round's own evidence is in its commit message and in the status note on its finding.
 
@@ -67,7 +66,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 6 | `await expect(await ...)` throws away auto-retrying assertions | High | ✅ Fixed |
 | 7 | Allure gets 109 text attachments instead of steps | High | ✅ Fixed |
 | 8 | `setValue` secretly clicks first | High | ✅ Fixed |
-| 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High | ⚠ Partial |
+| 9 | `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop | High | ✅ Fixed |
 | 10 | Brittle locators | High | ✅ Fixed |
 | 11 | String-template locators have no safety net | High | ✅ Fixed |
 | 12 | Massive duplication in specs — no fixture layer | Medium | ✅ Fixed |
@@ -78,7 +77,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
 | 18–27 | Tooling and hygiene | Low | ⬜ Open (#21 ✅ Fixed) |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
-| 29 | `filter.spec` fails rarely under parallel load, before the test body runs | High | ⬜ Open |
+| 29 | `filter.spec` fails rarely under parallel load, before the test body runs | High | ⬜ Open — root cause identified |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -261,9 +260,11 @@ Attachments are for *artifacts*: screenshots, HTML dumps, API payloads. For "wha
 
 ---
 
-### 9. `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop ⚠ Partially fixed
+### 9. `clickAllIfExists` uses a hardcoded 1s timeout in an unbounded loop ✅ Fixed
 
-> **Partially fixed in `2913efd`.** The magic `1000` became a named `CLICK_ALL_PROBE_TIMEOUT` constant, raised to 2000 ms. **Still open:** the `while` loop remains unbounded, so a click that never removes its element still spins until the Mocha timeout.
+> **Partially fixed in `2913efd`, completed in `2dbff97`.** The magic `1000` became a named `CLICK_ALL_PROBE_TIMEOUT` constant, raised to 2000 ms. Round 5 bounded the loop: it counts the matching elements first, loops at most that many times, then waits for the count to reach zero. The final check is a `waitUntil` rather than an immediate count, so it does not reintroduce the race #28 fixed.
+>
+> Verified against the old behavior with a scratch spec driving a locator that stays clickable no matter how often it is clicked (the login button with empty credentials): **before, 59879 ms, killed by `Timeout of 60000ms exceeded`; after, 2090 ms** with a message naming the locator and the real problem. The scratch spec was deleted afterwards.
 
 **Where:** `tests/utils/wdioFactory.utils.ts:83-98`
 
@@ -440,11 +441,40 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 ---
 
-### 29. `filter.spec` fails rarely under parallel load, before the test body runs ⬜ Open
+### 29. `filter.spec` fails rarely under parallel load, before the test body runs ⬜ Open — root cause identified
+
+> **Round 5 — diagnosed, not yet fixed.** A 40-run debug loop reproduced it once (run 19 of 40) and captured the worker logs. **The worker process crashes; the test never fails.**
+>
+> The launcher log is unambiguous:
+>
+> ```
+> DEBUG @wdio/local-runner: Runner 0-2 finished with exit code 3221226505
+> ```
+>
+> `3221226505` is `0xC0000409`, Windows `STATUS_STACK_BUFFER_OVERRUN` — a fail-fast hard crash of the Node worker process, not a non-zero exit from a failed assertion.
+>
+> The failing worker's log stops mid-startup. Compared against a healthy worker in the same run:
+>
+> | Startup stage | worker 0-2 (crashed) | worker 0-3 (healthy) |
+> |---|---|---|
+> | `init remote session` | ✓ | ✓ |
+> | `Using Chromedriver … from cache directory` | ✓ **← log ends** | ✓ |
+> | `Started Chromedriver … on port` | ✗ never reached | ✓ |
+> | `POST /session` | ✗ never reached | ✓ |
+>
+> Corroborating detail: the three surviving workers each left a `wdio-chrome-0-N-*` profile directory; worker 0-2 left none. Its `wdio-0-2-chromedriver.log` does show ChromeDriver starting successfully on port 59127, so the driver came up and the *worker* died around it, roughly 750 ms after being told to run.
+>
+> **What this settles:** the failure happens before any test code executes. That is the whole explanation for the missing Allure result and missing screenshot — `afterTest` cannot run in a process that no longer exists. **`filter.spec` is a victim of worker ordering, not a cause.** There is no bug in the spec, and no assertion is involved.
+>
+> **What is still open:** the crash *mechanism*. All four workers resolve ChromeDriver from one shared cache directory (`C:\Users\Home\AppData\Local\Temp`) and spawn their drivers within ~350 ms of each other, which is a plausible trigger, but nothing yet proves it. Treat contention as a hypothesis, not a conclusion.
+>
+> **The `retried 2x` anomaly reproduced** in this capture (`FAILED … (2 retries)` against a budget of 1). It now correlates with the crash path rather than appearing at random, which makes it a lead rather than the arithmetic puzzle recorded below.
+>
+> **Next experiments, cheapest first:** remove `@wdio/visual-service` (finding #20 — configured, entirely unused, and loaded immediately before the crash point) and re-run the 40-run loop; then `maxInstances: 2` to test the contention hypothesis directly. A run of 40 takes roughly four minutes.
 
 **Found during round 4. Not caused by the round-4 changes — a failure with the same signature occurred back in round 2, before them.**
 
-**What is known:**
+**What was known before the round-5 capture:**
 
 - Frequency is roughly 1 run in 10–15 of the full 4-worker suite.
 - The spec produces **no Allure result file and no failure screenshot**, so the failure happens outside the test body — `afterTest` never runs. This rules out an assertion failure.
@@ -515,7 +545,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 4:**
+**✅ Done — rounds 1 to 5:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -523,14 +553,14 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 2 | `e330547`, `500cb94` | #13, #11, #10, #15 |
 | 3 | `2237345` | #28, #21, #16 |
 | 4 | `6d48709`, `868f897` | #12, #14 |
+| 5 | `2dbff97` | #9; #29 diagnosed, not fixed |
 
 **Recommended next, in this order:**
 
-1. **#29 — the rare `filter.spec` failure under parallel load.** Highest value remaining: a flaky suite erodes trust faster than any missing feature, and this one is already costing investigation time. The finding lists three concrete next steps.
-2. **#18 — ESLint and Prettier.** Worth pulling forward. It would have caught the variable shadowing that #14's rename introduced, before `tsc` did, and the README already instructs contributors to install both extensions even though no config exists.
-3. **#9 (remainder) — the unbounded loop in `clickAllIfExists`.** The magic number is gone; a click that never removes its element still spins until the Mocha timeout.
-4. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
-5. **#19, #20, #22–#27 — the rest of the tooling.** Untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
+1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. Cheapest next experiment is removing `@wdio/visual-service` — see #20, which this now makes a candidate fix rather than only a cleanup — then re-running the 40-run loop. After that, `maxInstances: 2`.
+2. **#18 — ESLint and Prettier.** Worth pulling forward. It would have caught the variable shadowing that #14's rename introduced, before `tsc` did, and the README already instructs contributors to install both extensions even though no config exists. Pair it with **#24**, so the lint and typecheck scripts actually run in CI rather than being config nobody enforces.
+3. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
+4. **#19, #20, #22–#27 — the rest of the tooling.** Untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
 
 **🕓 Deferred to a future pass:**
 

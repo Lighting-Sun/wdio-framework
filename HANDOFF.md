@@ -11,7 +11,7 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). It was audited, producing 27 findings; two more (#28, #29) were discovered while fixing them. Fixes are being applied in priority order, in rounds.
 
-**Of 29 findings: 15 fixed, 2 deferred by the owner's explicit decision, 1 partially fixed (#9), 11 open.**
+**Of 29 findings: 16 fixed, 2 deferred by the owner's explicit decision, 11 open** (one of those, #29, is diagnosed but not yet fixed).
 
 `audit.md` carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. **Keep it current** — it is how the next session knows where things stand. Every fix round has been two commits: one `fix:`/`refactor:` for the code, one `docs:` updating the audit.
 
@@ -59,23 +59,32 @@ Runner is **tsx** (not ts-node). Node 24 locally, CI pins 20.17.0. Chrome runs h
 
 ## What remains
 
-### #29 — rare `filter.spec` failure under parallel load (High, **recommended next**)
+### #29 — worker process crashes during startup (High, **recommended next**)
 
-The most valuable thing to work on: a flaky suite erodes trust faster than a missing feature.
+**Round 5 found the root cause. It is not a test bug and not an assertion failure — the worker process dies.**
 
-**Known:**
-- ~1 run in 10–15 of the full 4-worker suite. Passes 6/6 in isolation.
-- Produces **no Allure result and no screenshot**, so it fails *outside* the test body — `afterTest` never runs. **This rules out an assertion failure.**
-- The retry also failed, so it is not purely transient within a run.
-- **It predates the fix work** — the same signature appeared in round 2, before the changes that were live when it was caught.
+A 40-run loop at `--logLevel debug` reproduced it once (run 19 of 40). The launcher log:
 
-**Leading hypothesis:** browser-session creation contention. `maxInstances: 10` against 4 spec files starts all four workers at once.
+```
+DEBUG @wdio/local-runner: Runner 0-2 finished with exit code 3221226505
+```
 
-**Next steps, in order:** loop with `--logLevel debug` and keep the worker log from a failing run; try `maxInstances: 2` to test the contention theory; check whether `@wdio/visual-service` (configured but unused — finding #20) participates in session setup.
+`3221226505` = `0xC0000409` = Windows `STATUS_STACK_BUFFER_OVERRUN`, a fail-fast hard crash of the Node worker process.
 
-### #9 (remainder) — unbounded loop in `clickAllIfExists` (High)
+The crashed worker's log stops after `Using Chromedriver … from cache directory` and never reaches `Started Chromedriver … on port` or `POST /session`, while healthy workers in the same run reach both. The crashed worker also left no `wdio-chrome-0-2-*` profile directory, though its own chromedriver log shows the driver starting fine. So the driver came up and the worker died around it, ~750 ms in.
 
-The magic `1000` became a named constant, but the `while` loop is still unbounded: a click that never removes its element spins until the Mocha timeout. Count the elements first, loop that many times, then assert zero remain.
+**This fully explains the missing Allure result and missing screenshot** — `afterTest` cannot run in a process that no longer exists. `filter.spec` is a victim of worker ordering, not a cause; there is nothing to fix in the spec.
+
+**Still unknown:** the crash mechanism. All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis.
+
+**Next experiments, cheapest first:**
+
+1. Remove `@wdio/visual-service` (finding #20 — configured, entirely unused, and loaded immediately before the crash point) and re-run the 40-run loop. This makes #20 a candidate *fix*, not just a cleanup.
+2. `maxInstances: 2`, to test the contention hypothesis directly.
+
+A 40-run loop takes about four minutes. The script is worth recreating: run the full suite in a loop with `--logLevel debug --outputDir <per-run dir>`, and keep the logs only from runs that exit non-zero.
+
+**Also reproduced:** the `retried 2x` anomaly against a budget of 1. It correlates with the crash path rather than appearing at random — a lead, not the arithmetic puzzle it first looked like.
 
 ### #17 — sort coverage and the stale architecture doc (Medium)
 
@@ -83,7 +92,9 @@ The magic `1000` became a named constant, but the `while` loop is still unbounde
 
 ### #18–20, #22–27 — tooling (Low)
 
-`#18` (ESLint + Prettier) is worth pulling forward — the audit ranks it second, above #9: it would have caught the variable shadowing described below before `tsc` did, and the README already tells contributors to install both extensions even though no config exists. The rest — untyped config object, unused visual service, `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
+`#18` (ESLint + Prettier) is worth pulling forward — the audit ranks it second: it would have caught the variable shadowing described below before `tsc` did, and the README already tells contributors to install both extensions even though no config exists. Pair it with `#24`, so the lint and typecheck scripts actually run in CI rather than being config nobody enforces. Expect a large mechanical diff across every file — keep it in its own commit so the substantive rounds stay reviewable.
+
+`#20` is no longer only a cleanup: the unused visual service loads immediately before the point where the #29 worker crash happens, so removing it is the cheapest experiment on that finding. The rest — untyped config object, `logLevel`, Node version pinning, credentials in JSON, unquoted workflow inputs, duplicated CI steps — can trickle in.
 
 ---
 
@@ -109,4 +120,4 @@ The magic `1000` became a named constant, but the `while` loop is still unbounde
 
 Nothing is pushed. `origin` is `github.com/Lighting-Sun/wdio-framework`. The owner chose "keep the branch as-is" when offered merge/PR/keep, and has not revisited it. **Ask before pushing, merging, or opening a PR** — that decision is theirs.
 
-20 files changed, +917/−264 against `main`.
+Run `git diff --stat main..HEAD` for the current size of the branch.
