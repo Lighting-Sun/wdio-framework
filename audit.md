@@ -24,8 +24,11 @@
 | `2dbff97` | Round 5 — finding #9; #29 diagnosed |
 | `a208a0a` | Round 6 — finding #20; #29 narrowed |
 | `02729e2`, `69799e2` | Round 7 — findings #18, #19 |
+| `044188a` | Round 8 — findings #22–#27 |
 
-**Fixed — 19 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9, #10, #11, #12, #13, #14, #15, #16, #18, #19, #20, #21, and #28.
+**Fixed — 25 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9–#16, and #18–#28.
+
+**The entire tooling and hygiene block (#18–#27) is now closed.**
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
@@ -77,7 +80,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
-| 18–27 | Tooling and hygiene | Low | ⬜ Open (#18, #19, #20, #21 ✅ Fixed) |
+| 18–27 | Tooling and hygiene | Low | ✅ All fixed |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
 
@@ -555,27 +558,47 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 There is no `specFileRetries` in the config. For e2e against a live site, `specFileRetries: 1` with `specFileRetriesDeferred: true` is standard. Retries hide flakes, so pair this with tracking *which* specs retry — do not let it become a mute button.
 
-### 22. `logLevel: 'error'`
+### 22. `logLevel: 'error'` ✅ Fixed
+
+> **Fixed in `044188a`.** Read from `WDIO_LOG_LEVEL`, validated against the allowed set, falling back to `error`. Both workflows set `info`. Verified by counting INFO/DEBUG lines from the same spec: **unset 0, `info` 187, invalid value 0** — a bad value falls back rather than breaking the run.
+
 
 Fine locally, unhelpful in CI. Consider driving it from an environment variable so CI can run at `info`.
 
-### 23. Node version mismatch
+### 23. Node version mismatch ✅ Fixed
+
+> **Fixed in `044188a`.** `.nvmrc` pins `20.17.0` and both workflows use `node-version-file`, so there is now a single source of truth and the two cannot drift apart again. `engines: { node: ">=20.17.0" }` added.
+
 
 CI pins `20.17.0`; local development is on `v24.15.0`. Add `"engines": { "node": ">=20" }` to `package.json` and an `.nvmrc`, so "works on my machine" stops being a category of bug.
 
-### 24. `package.json` scripts are thin
+### 24. `package.json` scripts are thin ✅ Fixed
+
+> **Fixed in `044188a`.** `test` and `wdio` collapse into one `test` script that takes arguments — verified with `npm test -- --suite loginAndPurchase`, which selected 2 spec files against 4 for a full run. `typecheck` and `lint` added and wired into **both** workflows as steps before the suite. Neither had ever run in CI, so a type error or a floating promise shipped.
+
 
 `"test": "npx wdio"` and `"wdio": "wdio run ./wdio.conf.ts"` overlap, and one is unused. There is no `typecheck` or `lint` script, so CI never type-checks — a spec with a type error still ships. Add `"typecheck": "tsc --noEmit"` and run it as a CI step before the tests.
 
-### 25. Credentials in a committed JSON file
+### 25. Credentials in a committed JSON file ✅ Fixed
+
+> **Fixed in `044188a`.** `tests/support/credentials.support.ts` reads `SAUCE_USERNAME` / `SAUCE_PASSWORD` (and the `LOCKED_OUT_` pair) with the committed fixtures as fallback. No spec reads users out of the JSON any more. Verified the override is really wired rather than merely written: `SAUCE_USERNAME=not_a_real_user` fails exactly the two valid-user tests while the locked-out test still passes.
+
 
 Fine for SauceDemo, which is public. Build the habit now anyway: read credentials from `process.env` with a fallback, so moving to a real application is a config change rather than a security incident.
 
-### 26. Unquoted workflow inputs
+### 26. Unquoted workflow inputs ✅ Fixed
+
+> **Fixed in `044188a`.** Inputs arrive via `env:` and are quoted at the point of use, so a future switch from `choice` to free text cannot turn an input into shell.
+
 
 `.github/workflows/ci-on-demand.yml:53-59` interpolates `${{ github.event.inputs.* }}` directly into `run:`. The `choice` input type constrains the values today, so it is safe *now*. The general rule: pass inputs via `env:` and reference `$VAR` in the script, so a future switch to a free-text input does not silently become shell injection.
 
-### 27. Three near-identical Test steps in the on-demand workflow
+### 27. Three near-identical Test steps in the on-demand workflow ✅ Fixed
+
+> **Fixed in `044188a`.** Collapsed into one step that builds its argument list. Verified it reproduces all four input cases exactly (`smoke` → grep, a named suite → `--suite`, empty → neither).
+>
+> **`smoke` stays a grep** rather than becoming an entry in the `suites` map, which this finding offered as the alternative: `@smoke` tags individual tests across several files, so a suite entry would select whole *files* and quietly run more than was asked for. The old second step's `|| 'regression'` fallback was dead code — its own `if` already guaranteed a non-empty suite — and is dropped.
+
 
 `.github/workflows/ci-on-demand.yml:51-59` has three conditional steps that differ only in arguments. Collapse them into one step that builds the argument string, or make `smoke` a real entry in the `suites` map in `wdio.conf.ts:40` so the grep special case disappears.
 
@@ -583,7 +606,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 7:**
+**✅ Done — rounds 1 to 8:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -594,13 +617,14 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 5 | `2dbff97` | #9; #29 diagnosed, not fixed |
 | 6 | `a208a0a` | #20; #29 narrowed — visual service ruled out |
 | 7 | `02729e2`, `69799e2` | #18, #19 |
+| 8 | `044188a` | #22, #23, #24, #25, #26, #27 |
 
 **Recommended next, in this order:**
 
 1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. Note the crash is not specific to any spec file — do not go hunting inside one.
-2. **#24 — wire `lint` and `typecheck` into CI.** Promoted from Low. #18 landed the scripts but nothing runs them, so a type error or a floating promise still ships. This is now the cheapest real safety gain on the list.
-3. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
-4. **#22–#27 — the rest of the tooling.** `logLevel`, Node version pinning, thin npm scripts, credentials in JSON, unquoted workflow inputs, duplicated CI steps.
+2. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
+
+These two are all that is left besides the deferred pair.
 
 **🕓 Deferred to a future pass:**
 
