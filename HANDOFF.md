@@ -1,7 +1,7 @@
 # Handoff — WebdriverIO framework audit remediation
 
-**Written:** 2026-09-23 (replaces the 2026-09-22 handoff)
-**Branch:** `fix/audit-critical-findings` — ahead of `main`, **nothing pushed, nothing merged**
+**Written:** 2026-09-23 (replaces the 2026-09-22 handoff; corrected after round 10)
+**Branch:** `fix/audit-critical-findings` — ahead of `main`, **pushed to `origin`, not merged**
 **Working tree:** clean
 **Read first:** [audit.md](audit.md). It is the plan, the spec and the status tracker in one document.
 
@@ -9,11 +9,11 @@
 
 ## Where this stands
 
-A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). An audit produced 27 findings; two more (#28, #29) surfaced while fixing them, so the audit runs to 29.
+A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). An audit produced 27 findings; four more surfaced while fixing them — #28 and #29 during the rounds, then #30 and #31 from round 10's first CI run — so the audit runs to 31.
 
-**26 fixed · 2 deferred by the owner's decision · 1 open.**
+**26 fixed · 2 deferred by the owner's decision · 3 open.**
 
-The one open finding is **#29**. It is diagnosed, narrowed, and has one untested experiment left. Everything else in the audit is closed.
+The open findings are **#29**, **#30** and **#31**. #29 is diagnosed, narrowed, and has two untested experiments left. #30 and #31 were both opened by round 10's first real CI run — see *CI status* below. Everything else in the audit is closed.
 
 Nine rounds of work are on the branch. Each round is two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
 
@@ -67,11 +67,22 @@ npm run open-allure                      # view the last report
 
 `typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.17.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
 
-**The CI changes have never actually run.** Nothing is pushed, so `node-version-file`, the typecheck/lint steps and the collapsed on-demand Test step will meet real GitHub Actions for the first time on whatever push happens next. The YAML parses and the shell logic was verified locally, but watch that first run.
+### CI status — corrected in round 10
+
+An earlier version of this handoff said the CI changes had never run *because nothing was pushed*. **Both halves of that were wrong, in opposite directions.**
+
+The branch **was** pushed, twice, on 2026-09-23. But the pushes started **no workflow at all**, because `ci.yml` triggers only on pushes to `main` / `continous-integration` and on pull requests to `main` — and this branch is neither. That is now recorded as **finding #30**. Pushing this branch will never run CI; do not expect it to.
+
+Round 10 worked around it by dispatching `ci-on-demand.yml` manually against the branch. [Run 35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) went **green in 44 s**, and every round-8 CI change was confirmed to do its job — `.nvmrc` resolving to 20.17.0, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines, all 11 tests passing on ubuntu, and the artifact genuinely uploading (1,026,451 bytes, verified through the API rather than from the green step, since `if-no-files-found: warn` lets that step pass on nothing). The evidence table is in `audit.md` under *CI verification*.
+
+**Two things still to know:**
+
+- **`ci.yml` itself has still never run.** The dispatch exercises `ci-on-demand.yml` only. They share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it.
+- **The run opened finding #31.** 14 `EBADENGINE` warnings: the ESLint 10 tree, `yargs@18`, `undici@7` and `cheerio` all want `^20.19.0 || ^22.13.0 || >=24`, and `.nvmrc` pins `20.17.0`. Warnings only, everything passed — but it means #18 and #23 landed in the same pass and disagreed with each other. Bumping `.nvmrc` to `20.19.0` clears all 14.
 
 ---
 
-## The only open finding: #29
+## The oldest open finding: #29
 
 ### A worker process crashes during startup
 
@@ -95,7 +106,11 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 **What is still unknown: the crash mechanism.** All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis, not a conclusion.
 
-**Remaining untested experiment: `maxInstances: 2`.** Be clear about what a result means. Fewer crashes would be a *mitigation* that costs wall-clock time, not a root-cause fix; the mechanism would still be unexplained. Don't let it land in the audit as "fixed" if it lands as "papered over."
+**Two untested experiments remain.**
+
+`maxInstances: 2` — be clear about what a result means. Fewer crashes would be a *mitigation* that costs wall-clock time, not a root-cause fix; the mechanism would still be unexplained. Don't let it land in the audit as "fixed" if it lands as "papered over."
+
+**A per-worker ChromeDriver cache directory** — cheaper, and strictly more informative. The shared cache is the stated hypothesis and nothing has tested it directly. Giving each worker its own directory tests contention without paying the serialization cost, and unlike `maxInstances: 2` a positive result would actually *explain* the mechanism rather than only suppress the symptom. Worth doing first.
 
 **How to reproduce.** Run the full suite in a loop with `--logLevel debug --outputDir <per-run dir>`, keeping logs only from runs that exit non-zero. 40 runs takes about four minutes. Read the launcher's `wdio.log` for the exit code and compare the crashed worker's spec log against a healthy one from the same run.
 
@@ -143,8 +158,10 @@ All of that is now wrong. It is a persona/instructions file rather than project 
 
 ## Integration status
 
-Nothing is pushed. `origin` is `github.com/Lighting-Sun/wdio-framework`. The owner chose "keep the branch as-is" when offered merge / PR / keep, and has not revisited it.
+The branch is **pushed** to `origin` (`github.com/Lighting-Sun/wdio-framework`) at `eb2c939`, matching local HEAD. It is **not merged** and there is **no pull request**. The owner chose "keep the branch as-is" when offered merge / PR / keep; the pushes happened afterwards and do not change that.
 
-**Ask before pushing, merging, or opening a PR.** That decision is theirs.
+**Ask before merging or opening a PR.** That decision is theirs.
+
+Note the overlap with finding #30: opening a PR is also the zero-config way to get `ci.yml` to run for the first time. Raise it as one decision, not two.
 
 Worth raising, though: the branch is 27 commits deep and has never been reviewed by anyone but the owner. That is a growing amount of unreviewed work on one line.

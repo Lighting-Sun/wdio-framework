@@ -1,9 +1,9 @@
 # WebdriverIO Framework Audit
 
 **Audience:** junior QA engineers working on this repo.
-**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 9)
+**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 10 — first CI verification)
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** **26 of 29 findings fixed. One open (#29), two deferred by decision (#2, #5).** See Progress below.
+**Status:** **26 of 31 findings fixed. Three open (#29, #30, #31), two deferred by decision (#2, #5).** See Progress below.
 
 ---
 
@@ -26,22 +26,42 @@
 | `02729e2`, `69799e2` | Round 7 — findings #18, #19 |
 | `044188a` | Round 8 — findings #22–#27 |
 | `5b6ba89`, `501b953` | Round 9 — finding #17 |
+| _(no code change)_ | Round 10 — first CI run on the branch; findings #30, #31 opened |
 
-**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5) and #29.
+**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5) and the three open (#29, #30, #31).
 
-**The entire tooling and hygiene block (#18–#27) is now closed.**
+**The entire tooling and hygiene block (#18–#27) is now closed** as originally written, though #30 and #31 are follow-ons from it that only a real CI run could expose.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
-**Two findings were discovered while fixing the others:** #28 (fixed) and #29 (open). The audit therefore runs to 29, not the original 27.
+**Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 and #31 (both opened by round 10's CI run). The audit therefore runs to 31, not the original 27.
 
-**Current verification state** — re-checked 2026-09-23, after round 9:
+**Current verification state** — re-checked 2026-09-23, after round 10:
 
 - `npm run typecheck` — clean.
 - `npm run lint` — clean.
 - `npm run format:check` — clean.
 - Full suite — 4 spec files, **11 tests** passing (8 before round 9 added the three extra sort cases).
-- **#29 still reproduces.** It appeared on a routine verification run on 2026-09-23; the immediate re-run was fully green. Across the two controlled 40-run loops it landed once each time. Nothing in the test code is implicated — see the finding.
+- **The suite now also passes in real CI** — see *CI verification* below. Locally it was Windows and Node 24; CI is ubuntu and Node 20.17.0, so that is the first evidence the framework is not accidentally tied to one machine.
+- **#29 still reproduces.** It appeared on a routine verification run on 2026-09-23; the immediate re-run was fully green. Across the two controlled 40-run loops it landed once each time. Nothing in the test code is implicated — see the finding. It has **not** been seen in CI, but one green ubuntu run is no evidence either way against a Windows-only crash at a 1-in-25-to-40 rate.
+
+### CI verification — 2026-09-23
+
+Every CI change from round 8 had been written and reasoned about but **never executed**. `ci-on-demand.yml` was dispatched against the branch ([run 35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691)) — green in 44s. What the log actually proves, step by step:
+
+| Change | Evidence |
+|--------|----------|
+| `node-version-file` (#23) | `node-version-file: .nvmrc` → `Attempting to download 20.17.0` → `node: v20.17.0`. The pin resolves; CI no longer carries its own hardcoded version. |
+| Typecheck + Lint steps (#24) | Both ran, both clean, both before the suite. Neither had ever run in CI before. |
+| Collapsed Test step (#27) | `Running: npm test -- --env qa --browser chrome` — with no suite selected, the script added neither `--suite` nor `--mochaOpts.grep`, which is the branch the three old steps handled by omission. |
+| `WDIO_LOG_LEVEL` (#22) | 1,881 INFO lines in the job log. Unset locally the count is 0, so the variable is genuinely driving the level. |
+| Suite integrity | 4 spec files, 11 tests, all passing on Chrome 153 headless — the same counts as locally. |
+| `onWorkerEnd` flaky hook (#21) | Silent, which is the correct behaviour on a fully green run. This is precisely the case the first implementation got backwards. |
+| Artifact upload | Really uploaded: 1,026,451 bytes, artifact ID 10740893333, confirmed through the REST API rather than from the green step alone — `if-no-files-found: warn` means that step can pass having uploaded nothing. |
+
+**Two new findings came out of this run**, #30 and #31. Both are things that only a real CI execution could surface, which is itself the argument for having done it.
+
+**`ci.yml` is still unexercised.** The dispatch runs `ci-on-demand.yml` only. The two workflows share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload have not run. Only a pull request to `main` triggers it — see #30.
 
 Each round's own evidence is in its commit message and in the status note on its finding.
 
@@ -86,6 +106,8 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 18–27 | Tooling and hygiene | Low | ✅ All fixed |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
+| 30 | `ci.yml` never runs on a feature branch | Medium | ⬜ Open |
+| 31 | `.nvmrc` pins a Node version the dependency tree no longer supports | Low | ⬜ Open |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -506,7 +528,7 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 >
 > **Next experiment:** `maxInstances: 2`. That is now the only untested item from the original list, and it targets the startup race directly.
 >
-> **Round 10 — a third capture, and the spec-agnostic claim is now settled.**
+> **Round 9 — a third capture, and the spec-agnostic claim is now settled.**
 >
 > Captured again on 2026-09-23 at **1 of 25 runs** — a higher rate than the two earlier 1-in-40 batches, though the sample is far too small to call that a trend. It also appeared on a routine verification run the same day. The third crash took **`completePurchase.spec`** on worker 0-1: same exit code `3221226505`, same 424-byte log truncated at exactly `Using Chromedriver … from cache directory`, same missing `wdio-chrome-0-1-*` profile directory, same `retried 2x`.
 >
@@ -627,6 +649,57 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ---
 
+## Found by the first CI run
+
+Both of these were invisible until round 8's CI changes actually executed. They are recorded separately from #28 and #29 because they were not found by reading code or by running the suite locally — no amount of either would have produced them.
+
+### 30. `ci.yml` never runs on a feature branch ⬜ Open
+
+**Where:** `.github/workflows/ci.yml:3-7`
+
+```yaml
+on:
+  push:
+    branches: ["main", "continous-integration"]
+  pull_request:
+    branches: ["main"]
+```
+
+`fix/audit-critical-findings` matches neither trigger, and there is no open pull request. The branch was pushed twice — on 2026-09-23, at `72f26af` and again at `eb2c939` — and **neither push started a workflow.** `gh run list --branch fix/audit-critical-findings` returns nothing at all; the newest run in the repository before round 10 was on `main`, dated 2026-09-02, predating every commit on this branch.
+
+So 29 commits of work, including a rewrite of both workflow files, sat on the remote with no CI having ever looked at them. Round 10's dispatch was a manual workaround, not the trigger doing its job.
+
+**Why this matters more than it looks.** The point of CI is to catch what a developer's machine does not. A trigger that only fires on `main` inverts that: the first real check happens *after* the merge, on the branch that has to stay green. This one is also self-concealing — nothing fails, nothing is red, there is simply no run, and a green local suite makes it easy not to notice.
+
+**Change — pick one:**
+
+- *Preferred:* add `pull_request:` with no branch filter, or open a PR as a matter of course. A PR to `main` already triggers the existing `pull_request` entry, so opening one is the zero-config fix and it gets the work reviewed at the same time.
+- *Or:* broaden the push trigger, e.g. `branches-ignore: []` or an explicit `fix/**` pattern. Cheaper, but it spends Actions minutes on every intermediate push.
+
+**Note the dead branch name.** The push trigger still lists `continous-integration` (sic — the typo is in the repo), a branch whose pull requests were all merged back in 2024. It is doing nothing now.
+
+### 31. `.nvmrc` pins a Node version the dependency tree no longer supports ⬜ Open
+
+**Where:** `.nvmrc` (`20.17.0`) and `package.json` (`engines: { node: ">=20.17.0" }`)
+
+The CI install logged **14 `EBADENGINE` warnings**. Every one wants `^20.19.0 || ^22.13.0 || >=24`, against a current of `v20.17.0`:
+
+`eslint@10.11.0`, `espree@11.2.0`, `eslint-scope@9.1.2`, `eslint-visitor-keys@5.0.1`, `@eslint/js@10.0.1`, `@eslint/core@1.2.1`, `@eslint/config-array@0.23.5`, `@eslint/config-helpers@0.7.0`, `@eslint/object-schema@3.0.5`, `@eslint/plugin-kit@0.7.3`, plus `yargs@18.0.0`, `yargs-parser@22.0.0`, `undici@7.25.0` and `cheerio@1.2.0`.
+
+Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #23 landed in the same pass and quietly disagreed with each other.
+
+**This is finding #23 half-landing.** #23 existed because CI pinned `20.17.0` while local ran `v24.15.0`, and "works on my machine" is not a debugging strategy. The `.nvmrc` fixed the *drift* — there is now one source of truth and the two cannot diverge again — but it pinned to a version the tooling itself no longer claims to support. CI currently runs ESLint on a Node version ESLint declares unsupported.
+
+**It is warnings-only today.** `npm ci` completed, the lint step passed, all 11 tests passed. Nothing is broken. That is exactly why it is worth fixing now rather than on the day it stops being warnings-only.
+
+**Change:** bump `.nvmrc` to `20.19.0` and `engines.node` to `>=20.19.0`. That clears all 14 warnings in a one-line change and stays on the Node 20 LTS line, so nothing else about the setup has to move.
+
+**Verify it, do not assume it.** Re-run the CI dispatch after the bump and confirm the warning count drops from 14 to 0 — a change made to silence warnings should be checked against the warnings.
+
+**Adjacent, not the same thing:** the run also warned that `actions/checkout@v4`, `actions/setup-node@v4` and `actions/upload-artifact@v4` target Node 20 and are being force-run on Node 24 by the runner. That is about the *actions*, not about `.nvmrc`, and the fix is bumping them to `@v5` when convenient. Separately, `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
+
+---
+
 ## Suggested order of work
 
 **✅ Done — rounds 1 to 9:**
@@ -642,10 +715,17 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 7 | `02729e2`, `69799e2` | #18, #19 |
 | 8 | `044188a` | #22, #23, #24, #25, #26, #27 |
 | 9 | `5b6ba89`, `501b953` | #17 |
+| 10 | _(no code change)_ | First CI run on the branch; #30 and #31 opened |
 
 **Recommended next:**
 
-1. **#29 — the only open finding left.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. The crash is not specific to any spec file — do not go hunting inside one.
+1. **#31 — bump `.nvmrc` to `20.19.0`.** Do this first because it is a one-line change with a defined success condition: re-dispatch CI and watch the `EBADENGINE` count go from 14 to 0. Cheap, verifiable, done.
+2. **#30 — get `ci.yml` to actually run.** Opening a pull request to `main` triggers it with no config change and gets 29 unreviewed commits in front of a reader at the same time. This is the owner's call, not a technical one.
+3. **#29 — the long-standing open finding.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
+   - **`maxInstances: 2`.** Targets the startup race directly. Be honest about what a result means: fewer crashes is a *mitigation* that costs wall-clock time, not a root-cause fix, and it must not land in this document as "fixed" if it lands as "papered over."
+   - **A per-worker ChromeDriver cache directory.** Cheaper, and strictly more informative. The shared cache under `AppData\Local\Temp` is the stated hypothesis and nothing has yet tested it directly; giving each worker its own directory tests contention without paying the serialization cost, and unlike `maxInstances: 2` a positive result would actually *explain* the mechanism rather than just suppress the symptom.
+
+   Remember the statistics: at a 1-in-40 base rate a clean 40-run batch is weak evidence, roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix.
 
 Everything else on this list is closed except the two deferred findings below.
 
