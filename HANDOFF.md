@@ -170,11 +170,20 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 ---
 
-## Known stale document, not yet addressed
+## Architecture and consulting docs — refreshed 2026-09-23
 
-**[consulting/.claude.md](consulting/.claude.md) has the same drift that finding #17 found in the architecture doc,** and nobody has been asked about it yet. It describes the project as "JavaScript ES6+ modules", refers to `tests/pages/page.js` and `[name].page.js` naming, documents test data as `JSON.parse(readFileSync(...))`, tells specs to load credentials from `tests/data/*.json`, and lists visual testing as an expertise area with "`@wdio/visual-service` is already configured with a baseline folder."
+`architecture/projectArchitecture.md`, `architecture/.claude.md` and `consulting/.claude.md` were regenerated at the owner's request after the merge, and checked claim by claim against the code at `9f18c20`.
 
-All of that is now wrong. It is a persona/instructions file rather than project documentation, so it was left alone rather than rewritten unasked — **raise it with the owner before touching it.**
+**The earlier warning here was out of date.** It said `consulting/.claude.md` still described a JavaScript project with visual testing. It didn't: it had already been rewritten around round 9. What was actually stale was its status line, plus a handful of claims in all three files that the code contradicts. Those are now corrected, and the code-level drift is listed under *Known Gaps* in `projectArchitecture.md`:
+
+- Specs call `expect(browser).toHaveUrl` 4 times, `cart.page.ts` calls `browser.waitUntil` (repeating a wait `clickAllIfExists` already does), and `login.page.ts` reads `browser.options`. The docs used to say pages and specs never touch `browser.*`.
+- 8 public read-once getters have no callers.
+- Not every factory method logs an Allure step, and the overview page reads the subtotal only (not tax or total).
+- The side-menu example used `'Logout'`; the code uses `'logout'`.
+
+**None of this drift was fixed in code.** It is documented, and each item is a small separate change for the owner to approve. The consulting doc recommends an `expectUrlContains` factory helper for the URL checks; that decision is the owner's and hasn't been made.
+
+**Still stale:** the root [.claude.md](.claude.md) says "29 findings, 26 fixed across nine rounds". It was outside the requested scope.
 
 ---
 
@@ -190,5 +199,5 @@ All of that is now wrong. It is a persona/instructions file rather than project 
 
 1. **#29, on the Windows machine.** Start with the per-worker ChromeDriver cache directory, then try `maxInstances: 2`. Don't run the loop on macOS or Linux and call a clean result evidence.
 2. **Bump the three actions from `@v4` to `@v5`**, then check with a `ci-on-demand.yml` dispatch. Do this before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19.
-3. **Raise the stale `consulting/.claude.md` with the owner** (see above). Don't rewrite it without being asked.
+3. **Ask the owner about the code drift the architecture refresh documented** (see above): the URL-assertion helper, the redundant `waitUntil` in `cart.page.ts`, the 8 unused getters. Don't fix any of it unasked.
 4. Optionally, read the test count from the Test step log of [run 35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515) to close the one gap in `ci.yml`'s verification.
