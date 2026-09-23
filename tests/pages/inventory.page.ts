@@ -8,6 +8,10 @@ class Inventory extends Page {
     header = new Header();
 
     locators = {
+        inventoryItemName: {
+            selector: "div[data-test='inventory-item-name']",
+            description: 'inventory item name',
+        },
         inventoryItemPrice: {
             selector: "div[data-test='inventory-item-price']",
             description: 'inventory item price',
@@ -27,6 +31,22 @@ class Inventory extends Page {
             description: "add to cart button for '${value}'",
         },
     };
+
+    async getTextFromNames(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.inventoryItemName);
+    }
+
+    /**
+     * Retrying comparison for the product name list, for the same reason as
+     * the price version below: selecting a sort option re-renders the grid.
+     */
+    async expectTextFromNames(expectedNames: string[]): Promise<void> {
+        await this.wdioFactory.expectEventuallyEquals(
+            'inventory item names',
+            () => this.getTextFromNames(),
+            expectedNames,
+        );
+    }
 
     async getTextFromPrices(): Promise<string[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);

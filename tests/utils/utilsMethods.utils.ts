@@ -1,10 +1,28 @@
 class UtilsMethods {
     /**
-     * Returns a sorted COPY. `Array.prototype.sort` sorts in place, so sorting
-     * the argument directly would silently reorder the caller's array.
+     * The four sort helpers below all return a sorted COPY.
+     * `Array.prototype.sort` sorts in place, so sorting the argument directly
+     * would silently reorder the caller's array.
+     *
+     * They pair with SauceDemo's four dropdown options: `lohi`, `hilo`, `az`,
+     * `za`. Each test sorts the values the page is already showing and asserts
+     * the page arrives at the same order, so a broken sort on the site fails
+     * the test rather than being mirrored by it.
      */
     static sortLowToHighValues(values: string[]): string[] {
         return [...values].sort((a, b) => Number(a) - Number(b));
+    }
+
+    static sortHighToLowValues(values: string[]): string[] {
+        return [...values].sort((a, b) => Number(b) - Number(a));
+    }
+
+    static sortTextAToZ(values: string[]): string[] {
+        return [...values].sort((a, b) => a.localeCompare(b));
+    }
+
+    static sortTextZToA(values: string[]): string[] {
+        return [...values].sort((a, b) => b.localeCompare(a));
     }
 
     /**
