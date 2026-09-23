@@ -12,10 +12,10 @@ You can run this repository without downloading it
 
 3. Click on the **Run Workflow** Option  
 4. you can customize your run by selecting **environment**, **browser** and **suite**
-   - Use **qa**. The **dev** option points at a target that doesn't currently work (known issue, audit #5)
+   - Use **qa**. The **dev** option points at a target that doesn't currently work (known issue)
    - Leaving **suite** empty runs everything; **smoke** runs only the tests tagged `@smoke`
 5. Optionally you can also check the allure report option if you want to be able to download the allure report (see the [Visual Studio Code](#visual-studio-code-only-follow-this-if-you-want-to-open-the-resulting-allure-report) section below on how to visualize the report)
-   - The report is only uploaded when all tests pass. On a failed run, read the **Test** step's log instead (known issue, audit #2)
+   - The report is only uploaded when all tests pass. On a failed run, read the **Test** step's log instead (known issue)
 6. Click on run worflow (you might need to reload the page so the new execution is visible)
 ![RunningWorkflow](https://github.com/user-attachments/assets/ff199856-d8e1-4e89-a013-664de3fe9afb)
 

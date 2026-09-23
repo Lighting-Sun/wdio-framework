@@ -2,7 +2,7 @@ import data from '../data/placeHolderData.json' with { type: 'json' };
 
 /**
  * Credentials, read from the environment with the committed fixtures as a
- * fallback (audit #25).
+ * fallback.
  *
  * SauceDemo's logins are public, so the JSON file is harmless here. The point
  * is the habit: when this framework is pointed at a real application, moving

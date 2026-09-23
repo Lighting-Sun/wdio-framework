@@ -19,14 +19,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           # .nvmrc is the single source of truth for the Node version, so local
-          # and CI cannot drift apart again (audit #23).
+          # and CI cannot drift apart.
           node-version-file: ".nvmrc"
           cache: "npm"
       - name: Install
         run: npm ci --no-fund --no-audit
-      # Static checks run before the suite: they are seconds long, they fail
-      # for reasons a browser run cannot tell you, and until now neither ran
-      # in CI at all, so a type error or a floating promise shipped (audit #24).
+      # Static checks run before the suite: they are seconds long, and they
+      # catch what a browser run cannot, such as a type error or a floating
+      # promise that makes a test pass without asserting anything.
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -35,7 +35,7 @@ jobs:
         run: npm test -- --env qa
         env:
           # `error` is right locally and useless in CI, where the log is all
-          # you get (audit #22).
+          # you get.
           WDIO_LOG_LEVEL: info
       - uses: actions/upload-artifact@v7
         with:

@@ -26,7 +26,7 @@ export default tseslint.config(
         },
         rules: {
             /**
-             * The rename in audit #14 left a parameter and a local both named
+             * A bulk rename once left a parameter and a local both named
              * `element` in the same function. `tsc` caught it; a reader would
              * plausibly not have. This rule catches that class directly.
              */
@@ -48,7 +48,7 @@ export default tseslint.config(
     },
 
     {
-        // wdio's own rules target the mistakes in audit #6: `await expect(await ...)`
+        // wdio's own rules catch `await expect(await ...)`, which
         // discards the auto-retrying assertion and reintroduces the race it exists to prevent.
         // The plugin's rule keys are already namespaced, so its config is spread whole
         // rather than cherry-picked.

@@ -38,7 +38,7 @@ const SPEC_FILE_RETRIES = 1;
 /**
  * `error` is right locally, where a failing run is in front of you, and wrong
  * in CI, where the log is all you get. Driven by an env var so CI can raise it
- * without a code change (audit #22).
+ * without a code change.
  */
 type WdioLogLevel = NonNullable<WebdriverIO.Config['logLevel']>;
 const LOG_LEVELS: readonly WdioLogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'silent'];
@@ -131,7 +131,7 @@ export const config: WebdriverIO.Config = {
         }
         const screenshot = await browser.takeScreenshot();
         // Must be awaited: afterTest resolving before the attachment is written
-        // can lose the screenshot during teardown, which is the whole point of #1.
+        // can lose the screenshot during teardown, which defeats the purpose of this hook.
         await allureReporter.addAttachment('Screenshot on failure', Buffer.from(screenshot, 'base64'), 'image/png');
     },
 
