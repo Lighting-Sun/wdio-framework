@@ -693,9 +693,15 @@ So 29 commits of work, including a rewrite of both workflow files, sat on the re
 
 **Where:** `.nvmrc` (`20.17.0`) and `package.json` (`engines: { node: ">=20.17.0" }`)
 
-The CI install logged **14 `EBADENGINE` warnings**. Every one wants `^20.19.0 || ^22.13.0 || >=24`, against a current of `v20.17.0`:
+The CI install logged **14 `EBADENGINE` warnings** against a current of `v20.17.0`. They carry **three different requirements**, not one:
 
-`eslint@10.11.0`, `espree@11.2.0`, `eslint-scope@9.1.2`, `eslint-visitor-keys@5.0.1`, `@eslint/js@10.0.1`, `@eslint/core@1.2.1`, `@eslint/config-array@0.23.5`, `@eslint/config-helpers@0.7.0`, `@eslint/object-schema@3.0.5`, `@eslint/plugin-kit@0.7.3`, plus `yargs@18.0.0`, `yargs-parser@22.0.0`, `undici@7.25.0` and `cheerio@1.2.0`.
+| Requirement | Packages |
+|---|---|
+| `^20.19.0 \|\| ^22.13.0 \|\| >=24` | `eslint@10.11.0`, `espree@11.2.0`, `eslint-scope@9.1.2`, `eslint-visitor-keys@5.0.1`, `@eslint/js@10.0.1`, `@eslint/core@1.2.1`, `@eslint/config-array@0.23.5`, `@eslint/config-helpers@0.7.0`, `@eslint/object-schema@3.0.5`, `@eslint/plugin-kit@0.7.3` |
+| `^20.19.0 \|\| ^22.12.0 \|\| >=23` | `yargs@18.0.0`, `yargs-parser@22.0.0` |
+| `>=20.18.1` | `cheerio@1.2.0`, `undici@7.25.0` |
+
+*(An earlier draft of this finding said all 14 shared the first requirement. They do not. It does not change the fix — `^20.19.0` is the binding constraint and the other two ranges are looser — but the distinction matters if any of these are upgraded independently later.)*
 
 Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #23 landed in the same pass and quietly disagreed with each other.
 

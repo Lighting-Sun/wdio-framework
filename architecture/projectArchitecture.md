@@ -217,7 +217,7 @@ File: `tests/utils/wdioFactory.utils.ts`
 | `wdio.conf.ts` | Runner, suites, browsers (Chrome/Firefox headless), timeouts, env-driven `logLevel`, `specFileRetries`, Allure + Spec reporters, lifecycle hooks |
 | `eslint.config.js` | Flat config: recommended JS + TypeScript rules, `eslint-plugin-wdio` on `tests/`, three type-aware rules, Prettier compatibility last |
 | `.prettierrc` / `.prettierignore` | Formatting. Scoped to code — `*.md` and `.github` are deliberately excluded |
-| `.nvmrc` | Node 20.17.0, read by both workflows |
+| `.nvmrc` | Node 20.19.0, read by both workflows |
 | `.github/workflows/ci.yml` | Push/PR to main: typecheck → lint → full regression on QA → Allure artifact |
 | `.github/workflows/ci-on-demand.yml` | Manual dispatch: configurable env, browser, suite; one Test step that builds its own arguments |
 

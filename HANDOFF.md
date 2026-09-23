@@ -73,7 +73,7 @@ gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrom
 gh run watch <run-id> --exit-status
 ```
 
-`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.17.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
+`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
 
 ### CI status — corrected in round 10
 
