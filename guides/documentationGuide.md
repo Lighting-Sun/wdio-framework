@@ -69,7 +69,7 @@ Examples of bad rules (too vague to enforce):
 Every file in the layer, one row per file, with a one-line description of what it does. This table goes stale — that is expected. Its value is in making gaps and duplicates visible.
 
 **Part D — Tradeoffs (optional, only if non-obvious)**
-If a design decision in this layer has a meaningful cost, document the cost. Example: "Singleton exports simplify imports but are incompatible with parallel test execution." Skip this if the design is straightforward.
+If a design decision in this layer has a meaningful cost, document the cost, including the condition under which it would stop holding. Example: "Singleton exports simplify imports. They are safe only while each spec file runs in its own worker process." Skip this if the design is straightforward.
 
 ---
 
@@ -144,6 +144,7 @@ After completing Steps 1–6, write a short header for the document:
 1. **Purpose statement (2 sentences):** What decisions this document is meant to support. Who the audience is.
 2. **How to use it (3–4 bullets):** The specific questions a reader should be able to answer after reading this document.
 3. **How to keep it current (1 rule):** The trigger for updating the document. Example: "Update this document when a new layer is added, a layer's responsibility changes, or a known gap is closed."
+4. **Verification stamp (1 line):** The date and commit the document was last checked against the code, for example `Verified against the code: 2026-09-23, main at 9f18c20`. Update it every time you re-check. A document without one gives the reader no way to tell how stale it is.
 
 ---
 
@@ -152,7 +153,7 @@ After completing Steps 1–6, write a short header for the document:
 The final document should follow this order:
 
 ```
-1. Header (purpose, how to use, maintenance rule)
+1. Header (purpose, how to use, maintenance rule, verification stamp)
 2. Layer overview (dependency diagram)
 3. One section per layer (responsibility, rules, inventory, tradeoffs)
 4. Cross-cutting concerns
@@ -173,5 +174,7 @@ Before publishing, verify:
 - [ ] Every file in the codebase appears in exactly one layer inventory
 - [ ] The execution flow touches every layer in the dependency diagram
 - [ ] Known gaps include only items that affect new development decisions
+- [ ] Every rule was checked against the code, not carried over from a previous version, and where the code breaks a rule, *Known Gaps* says so
+- [ ] The verification stamp names today's date and the commit you checked
 - [ ] The document can be read in under 15 minutes
 - [ ] No rule says "be consistent" or "follow best practices" without specifying what that means in this codebase
