@@ -3,7 +3,7 @@
 **Audience:** junior QA engineers working on this repo.
 **Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 10 — first CI verification)
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** **26 of 31 findings fixed. Three open (#29, #30, #31), two deferred by decision (#2, #5).** See Progress below.
+**Status:** **26 of 31 findings fixed. Two open (#29, #31), two deferred by decision (#2, #5), one closed by decision (#30).** See Progress below.
 
 ---
 
@@ -26,15 +26,17 @@
 | `02729e2`, `69799e2` | Round 7 — findings #18, #19 |
 | `044188a` | Round 8 — findings #22–#27 |
 | `5b6ba89`, `501b953` | Round 9 — finding #17 |
-| _(no code change)_ | Round 10 — first CI run on the branch; findings #30, #31 opened |
+| _(no code change)_ | Round 10 — first CI run on the branch; #30 raised and closed by decision, #31 opened |
 
-**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5) and the three open (#29, #30, #31).
+**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5), the one closed by decision (#30), and the two open (#29, #31).
 
 **The entire tooling and hygiene block (#18–#27) is now closed** as originally written, though #30 and #31 are follow-ons from it that only a real CI run could expose.
 
 **Deferred by decision — 2 findings:** #2 and #5, at unchanged severity.
 
-**Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 and #31 (both opened by round 10's CI run). The audit therefore runs to 31, not the original 27.
+**Closed by decision — 1 finding:** #30. The CI trigger policy is intentional; see the finding. This is distinct from deferral — nothing about it is scheduled for later.
+
+**Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 (closed by decision) and #31 (open), both raised by round 10's CI run. The audit therefore runs to 31, not the original 27.
 
 **Current verification state** — re-checked 2026-09-23, after round 10:
 
@@ -106,7 +108,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 18–27 | Tooling and hygiene | Low | ✅ All fixed |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
-| 30 | `ci.yml` never runs on a feature branch | Medium | ⬜ Open |
+| 30 | `ci.yml` never runs on a feature branch | Medium | ✋ Closed by decision |
 | 31 | `.nvmrc` pins a Node version the dependency tree no longer supports | Low | ⬜ Open |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
@@ -653,7 +655,19 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 Both of these were invisible until round 8's CI changes actually executed. They are recorded separately from #28 and #29 because they were not found by reading code or by running the suite locally — no amount of either would have produced them.
 
-### 30. `ci.yml` never runs on a feature branch ⬜ Open
+### 30. `ci.yml` never runs on a feature branch ✋ Closed by decision — working as intended
+
+> **The owner decided on 2026-09-23 to keep the triggers as they are.** CI runs at pull-request time and on `main`, not on every feature-branch push. That is a deliberate policy, not an oversight, and the finding is closed rather than deferred — there is no future pass in which this gets "fixed."
+>
+> **What the decision means in practice:**
+>
+> - A feature branch gets no automatic run, however many times it is pushed. Do not push expecting CI and then wonder where the run went.
+> - `ci.yml` is triggered by **opening a pull request to `main`**. That is the designed entry point, and it is still the only way `ci.yml` itself has ever been exercised — it has not been, yet.
+> - For an ad-hoc check on a branch before any PR exists, **dispatch `ci-on-demand.yml` against the branch.** Round 10 called that a workaround; under this decision it is the supported path. `gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrome -f artifacts=true`.
+>
+> **The trade-off being accepted,** stated plainly so nobody has to rediscover it: the first automatic check of a branch's work happens at PR time, so a batch of commits is verified all at once rather than incrementally. For a practice repo with a 44-second suite and one contributor, that is a sensible place to spend Actions minutes. It would be worth revisiting if the branch lifetime or the contributor count grows.
+>
+> **Still worth a separate look:** the dead `continous-integration` entry in the push trigger, described at the end of this finding. Removing it is unrelated to the trigger policy — it names a branch last used in 2024.
 
 **Where:** `.github/workflows/ci.yml:3-7`
 
@@ -669,12 +683,9 @@ on:
 
 So 29 commits of work, including a rewrite of both workflow files, sat on the remote with no CI having ever looked at them. Round 10's dispatch was a manual workaround, not the trigger doing its job.
 
-**Why this matters more than it looks.** The point of CI is to catch what a developer's machine does not. A trigger that only fires on `main` inverts that: the first real check happens *after* the merge, on the branch that has to stay green. This one is also self-concealing — nothing fails, nothing is red, there is simply no run, and a green local suite makes it easy not to notice.
+**Why this was filed.** The point of CI is to catch what a developer's machine does not, and this configuration delays that until a PR exists — which, when the finding was written, no one had opened. It is also self-concealing: nothing fails, nothing is red, there is simply no run, and a green local suite makes it easy not to notice. *(The original draft of this paragraph said the first check happens after the merge. That was wrong — the `pull_request` trigger fires before it, which is part of why the trigger policy is defensible.)*
 
-**Change — pick one:**
-
-- *Preferred:* add `pull_request:` with no branch filter, or open a PR as a matter of course. A PR to `main` already triggers the existing `pull_request` entry, so opening one is the zero-config fix and it gets the work reviewed at the same time.
-- *Or:* broaden the push trigger, e.g. `branches-ignore: []` or an explicit `fix/**` pattern. Cheaper, but it spends Actions minutes on every intermediate push.
+**Change — considered and declined.** Broadening the triggers (a `pull_request:` entry with no branch filter, or a `fix/**` push pattern) was the original recommendation. The owner chose instead to keep CI at PR time and use the on-demand dispatch for branch checks. The options are left here so the reasoning is visible, not because either is pending.
 
 **Note the dead branch name.** The push trigger still lists `continous-integration` (sic — the typo is in the repo), a branch whose pull requests were all merged back in 2024. It is doing nothing now.
 
@@ -715,12 +726,12 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 | 7 | `02729e2`, `69799e2` | #18, #19 |
 | 8 | `044188a` | #22, #23, #24, #25, #26, #27 |
 | 9 | `5b6ba89`, `501b953` | #17 |
-| 10 | _(no code change)_ | First CI run on the branch; #30 and #31 opened |
+| 10 | _(no code change)_ | First CI run on the branch; #30 raised then closed by decision, #31 opened |
 
 **Recommended next:**
 
 1. **#31 — bump `.nvmrc` to `20.19.0`.** Do this first because it is a one-line change with a defined success condition: re-dispatch CI and watch the `EBADENGINE` count go from 14 to 0. Cheap, verifiable, done.
-2. **#30 — get `ci.yml` to actually run.** Opening a pull request to `main` triggers it with no config change and gets 29 unreviewed commits in front of a reader at the same time. This is the owner's call, not a technical one.
+2. **`ci.yml` has still never run.** #30 is closed — the trigger policy stays — so the way it runs is a pull request to `main`, which also gets 29 unreviewed commits in front of a reader. Whether and when to open one is the owner's call, not a technical one. Until then, use the on-demand dispatch for branch checks.
 3. **#29 — the long-standing open finding.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
    - **`maxInstances: 2`.** Targets the startup race directly. Be honest about what a result means: fewer crashes is a *mitigation* that costs wall-clock time, not a root-cause fix, and it must not land in this document as "fixed" if it lands as "papered over."
    - **A per-worker ChromeDriver cache directory.** Cheaper, and strictly more informative. The shared cache under `AppData\Local\Temp` is the stated hypothesis and nothing has yet tested it directly; giving each worker its own directory tests contention without paying the serialization cost, and unlike `maxInstances: 2` a positive result would actually *explain* the mechanism rather than just suppress the symptom.
@@ -728,6 +739,10 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
    Remember the statistics: at a 1-in-40 base rate a clean 40-run batch is weak evidence, roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix.
 
 Everything else on this list is closed except the two deferred findings below.
+
+**✋ Closed by decision — not pending:**
+
+- **#30** — the CI trigger policy. CI runs at PR time and on `main`, not on feature-branch pushes. Use `ci-on-demand.yml` to check a branch before a PR exists.
 
 **🕓 Deferred to a future pass:**
 

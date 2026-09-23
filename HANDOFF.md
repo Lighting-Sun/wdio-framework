@@ -11,9 +11,9 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). An audit produced 27 findings; four more surfaced while fixing them — #28 and #29 during the rounds, then #30 and #31 from round 10's first CI run — so the audit runs to 31.
 
-**26 fixed · 2 deferred by the owner's decision · 3 open.**
+**26 fixed · 2 deferred by the owner's decision · 1 closed by decision · 2 open.**
 
-The open findings are **#29**, **#30** and **#31**. #29 is diagnosed, narrowed, and has two untested experiments left. #30 and #31 were both opened by round 10's first real CI run — see *CI status* below. Everything else in the audit is closed.
+The open findings are **#29** and **#31**. #29 is diagnosed, narrowed, and has two untested experiments left. #31 is a one-line `.nvmrc` bump. **#30 is closed by decision** — the CI trigger policy is intentional. Both #30 and #31 came out of round 10's first real CI run; see *CI status* below.
 
 Nine rounds of work are on the branch. Each round is two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
 
@@ -27,6 +27,7 @@ The owner made these calls explicitly. Do not reopen them without being asked.
 
 | Decision | Detail |
 |---|---|
+| **#30 — CI triggers stay as they are** | CI runs at PR time and on `main`, not on feature-branch pushes. The finding is **closed**, not deferred: there is no future pass in which the triggers get broadened. Use the `ci-on-demand.yml` dispatch to check a branch. |
 | **#2 and #5 stay deferred** | CI artifact-on-failure, and the broken `dev` environment. Severity stays **Critical** — deferring work and downgrading risk are different decisions, and the audit records it that way. Do not "helpfully" fix them while editing those files. |
 | **Visual testing is out of scope** | `@wdio/visual-service` was dropped in round 6 (#20). Nothing was lost: it had no assertions, no baseline directory, and `.gitignore` made baselines uncommittable. Do not reintroduce it. |
 | **Assertion style** | Retry helpers live in the factory (`expectText`, `expectTextsFromElements`, `expectEventuallyEquals`), surfaced through page methods. Specs never receive raw elements. This preserves "no `$()` outside the factory" and keeps Allure logging in one place. |
@@ -65,19 +66,28 @@ WDIO_LOG_LEVEL=info npm test             # raise log level without touching the 
 npm run open-allure                      # view the last report
 ```
 
+Pushing a feature branch starts **no** CI run — see #30, that is deliberate. To check a branch in real CI before opening a PR:
+
+```bash
+gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrome -f artifacts=true
+gh run watch <run-id> --exit-status
+```
+
 `typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.17.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
 
 ### CI status — corrected in round 10
 
 An earlier version of this handoff said the CI changes had never run *because nothing was pushed*. **Both halves of that were wrong, in opposite directions.**
 
-The branch **was** pushed, twice, on 2026-09-23. But the pushes started **no workflow at all**, because `ci.yml` triggers only on pushes to `main` / `continous-integration` and on pull requests to `main` — and this branch is neither. That is now recorded as **finding #30**. Pushing this branch will never run CI; do not expect it to.
+The branch **was** pushed, twice, on 2026-09-23. But the pushes started **no workflow at all**, because `ci.yml` triggers only on pushes to `main` / `continous-integration` and on pull requests to `main` — and this branch is neither.
 
-Round 10 worked around it by dispatching `ci-on-demand.yml` manually against the branch. [Run 35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) went **green in 44 s**, and every round-8 CI change was confirmed to do its job — `.nvmrc` resolving to 20.17.0, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines, all 11 tests passing on ubuntu, and the artifact genuinely uploading (1,026,451 bytes, verified through the API rather than from the green step, since `if-no-files-found: warn` lets that step pass on nothing). The evidence table is in `audit.md` under *CI verification*.
+**That is intentional, and the owner confirmed it on 2026-09-23.** Finding #30 is closed, not open: CI runs at PR time and on `main`, never on a feature-branch push. Do not expect a push to start a run, and do not "fix" the triggers.
+
+To check a branch before a PR exists, **dispatch `ci-on-demand.yml` against it** — under this policy that is the supported path, not a workaround. Round 10 did exactly that. [Run 35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) went **green in 44 s**, and every round-8 CI change was confirmed to do its job — `.nvmrc` resolving to 20.17.0, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines, all 11 tests passing on ubuntu, and the artifact genuinely uploading (1,026,451 bytes, verified through the API rather than from the green step, since `if-no-files-found: warn` lets that step pass on nothing). The evidence table is in `audit.md` under *CI verification*.
 
 **Two things still to know:**
 
-- **`ci.yml` itself has still never run.** The dispatch exercises `ci-on-demand.yml` only. They share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it.
+- **`ci.yml` itself has still never run.** The dispatch exercises `ci-on-demand.yml` only. They share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it — and under the #30 decision that is the intended route, so it stays unproven until a PR is opened.
 - **The run opened finding #31.** 14 `EBADENGINE` warnings: the ESLint 10 tree, `yargs@18`, `undici@7` and `cheerio` all want `^20.19.0 || ^22.13.0 || >=24`, and `.nvmrc` pins `20.17.0`. Warnings only, everything passed — but it means #18 and #23 landed in the same pass and disagreed with each other. Bumping `.nvmrc` to `20.19.0` clears all 14.
 
 ---
