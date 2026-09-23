@@ -1,15 +1,16 @@
 # WebdriverIO Framework Audit
 
 **Audience:** junior QA engineers working on this repo.
-**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 11)
+**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 12)
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
 **Status:** **27 of 31 findings fixed. One open (#29), two deferred by decision (#2, #5), one closed by decision (#30).** See Progress below.
+**Integration:** merged to `main` on 2026-09-23 as squash commit `9f18c20` ([PR #23](https://github.com/Lighting-Sun/wdio-framework/pull/23)). `ci.yml` ran green on the PR and on `main` after the merge.
 
 ---
 
 ## Progress
 
-**Branch:** `fix/audit-critical-findings`
+**Branch:** `fix/audit-critical-findings`, 34 commits, squash-merged to `main` as `9f18c20` via [PR #23](https://github.com/Lighting-Sun/wdio-framework/pull/23). The short hashes below belong to the branch. They are not on `main`'s first-parent history, but `git show <hash>` still finds them as long as the branch exists.
 
 | Commit | What |
 |--------|------|
@@ -28,6 +29,7 @@
 | `5b6ba89`, `501b953` | Round 9 — finding #17 |
 | _(no code change)_ | Round 10 — first CI run on the branch; #30 raised and closed by decision, #31 opened |
 | `b07abcc` | Round 11 — finding #31; verified by a second CI run |
+| `9f18c20` | Round 12 — PR #23 squash-merged to `main`; `ci.yml` run for the first time, on the PR and on `main` |
 
 **Fixed — 27 findings:** #1, #3, #4, #6–#28 and #31 — that is, everything except the two deferred (#2, #5), the one closed by decision (#30), and the one open (#29).
 
@@ -39,13 +41,14 @@
 
 **Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 (closed by decision) and #31 (fixed), both raised by round 10's CI run. The audit therefore runs to 31, not the original 27.
 
-**Current verification state** — re-checked 2026-09-23, after round 10:
+**Current verification state** — re-checked 2026-09-23, after round 12:
 
 - `npm run typecheck` — clean.
 - `npm run lint` — clean.
 - `npm run format:check` — clean.
 - Full suite — 4 spec files, **11 tests** passing (8 before round 9 added the three extra sort cases).
 - **The suite passes in real CI** on Node 20.19.0 as of round 11 ([run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334)), with zero `EBADENGINE` warnings.
+- **`ci.yml` has now run, twice, both green:** on PR #23 ([run 35889925746](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35889925746)) and on `main` after the merge ([run 35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515)). See *CI verification* below.
 - **The suite also passed in CI on Node 20.17.0** — see *CI verification* below. Locally it was Windows and Node 24; CI is ubuntu and Node 20.17.0, so that is the first evidence the framework is not accidentally tied to one machine.
 - **#29 still reproduces.** It appeared on a routine verification run on 2026-09-23; the immediate re-run was fully green. Across the two controlled 40-run loops it landed once each time. Nothing in the test code is implicated — see the finding. It has **not** been seen in CI, but one green ubuntu run is no evidence either way against a Windows-only crash at a 1-in-25-to-40 rate.
 
@@ -65,7 +68,24 @@ Every CI change from round 8 had been written and reasoned about but **never exe
 
 **Two new findings came out of this run**, #30 and #31. Both are things that only a real CI execution could surface, which is itself the argument for having done it.
 
-**`ci.yml` is still unexercised.** The dispatch runs `ci-on-demand.yml` only. The two workflows share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload have not run. Only a pull request to `main` triggers it — see #30.
+**`ci.yml` was unexercised at this point.** The dispatch runs `ci-on-demand.yml` only. The two workflows share the checkout / setup / install / typecheck / lint prefix, so most of the risk was retired, but `ci.yml`'s own Test step and artifact upload had not run. Only a pull request to `main` triggers it (see #30). Round 12 closed that gap, as described next.
+
+### CI verification — `ci.yml`, round 12
+
+PR #23 triggered `ci.yml` for the first time, and the merge triggered it again on `main`. The job steps and artifacts were read through the REST API rather than taken from the green checkmark:
+
+| | PR run [35889925746](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35889925746) | `main` run [35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515) |
+|---|---|---|
+| Trigger | `pull_request`, branch head `4205dc2` | `push` to `main`, squash commit `9f18c20` |
+| Duration | 51 s | 52 s |
+| Checkout, setup-node, Install, Typecheck, Lint, Test | all `success` | all `success` |
+| Artifact upload | `allure-report`, 1,026,497 bytes | `allure-report`, 1,026,439 bytes |
+
+**The merge changed nothing.** `git diff 4205dc2 9f18c20` is empty, so `main` has exactly the tree the PR run tested.
+
+**The artifact sizes are consistent** with the on-demand run's 1,026,451 bytes, so a real report was uploaded, not an empty one. `if-no-files-found: warn` would let the upload step pass with nothing in it.
+
+**Not verified: the test count.** Job logs need an authenticated GitHub session, and `gh` was not available on the machine that checked these runs. The Test step passed, which `npm test` only does when every spec passes. The "11 tests" figure, though, comes from the on-demand runs and has not been read out of either `ci.yml` log. Read it from the Test step's log if it matters.
 
 Each round's own evidence is in its commit message and in the status note on its finding.
 
@@ -109,7 +129,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ✅ Fixed |
 | 18–27 | Tooling and hygiene | Low | ✅ All fixed |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
-| 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
+| 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — diagnosed, mechanism unknown |
 | 30 | `ci.yml` never runs on a feature branch | Medium | ✋ Closed by decision |
 | 31 | `.nvmrc` pins a Node version the dependency tree no longer supports | Low | ✅ Fixed |
 
@@ -489,7 +509,7 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 
 ---
 
-### 29. A worker process crashes rarely during startup under parallel load ⬜ Open — root cause identified
+### 29. A worker process crashes rarely during startup under parallel load ⬜ Open — diagnosed, mechanism unknown
 
 *(Originally filed as a `filter.spec` failure. Round 6 showed any spec can be the victim — see below.)*
 
@@ -664,7 +684,7 @@ Both of these were invisible until round 8's CI changes actually executed. They 
 > **What the decision means in practice:**
 >
 > - A feature branch gets no automatic run, however many times it is pushed. Do not push expecting CI and then wonder where the run went.
-> - `ci.yml` is triggered by **opening a pull request to `main`**. That is the designed entry point, and it is still the only way `ci.yml` itself has ever been exercised — it has not been, yet.
+> - `ci.yml` is triggered by **opening a pull request to `main`**. That is the designed entry point. It first happened with PR #23 on 2026-09-23, and `ci.yml` then ran green on the PR and again on `main` after the merge (see *CI verification — `ci.yml`, round 12*).
 > - For an ad-hoc check on a branch before any PR exists, **dispatch `ci-on-demand.yml` against the branch.** Round 10 called that a workaround; under this decision it is the supported path. `gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrome -f artifacts=true`.
 >
 > **The trade-off being accepted,** stated plainly so nobody has to rediscover it: the first automatic check of a branch's work happens at PR time, so a batch of commits is verified all at once rather than incrementally. For a practice repo with a 44-second suite and one contributor, that is a sensible place to spend Actions minutes. It would be worth revisiting if the branch lifetime or the contributor count grows.
@@ -738,7 +758,7 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 9:**
+**✅ Done — rounds 1 to 12:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -753,15 +773,17 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 | 9 | `5b6ba89`, `501b953` | #17 |
 | 10 | _(no code change)_ | First CI run on the branch; #30 raised then closed by decision, #31 opened |
 | 11 | `b07abcc` | #31 — Node pin bumped to 20.19.0, verified in CI |
+| 12 | `9f18c20` | PR #23 squash-merged to `main`; `ci.yml` green on the PR and on `main` |
 
 **Recommended next:**
 
-1. **`ci.yml` has still never run.** #30 is closed — the trigger policy stays — so the way it runs is a pull request to `main`, which also gets 29 unreviewed commits in front of a reader. Whether and when to open one is the owner's call, not a technical one. Until then, use the on-demand dispatch for branch checks.
-2. **#29 — the last open finding.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
+1. **#29 — the last open finding.** The crash is diagnosed (a worker process dies with exit code `0xC0000409` during ChromeDriver startup), but its *mechanism* is still unknown. **Every capture so far came from a Windows machine.** Run these experiments there. A clean loop on macOS or Linux says nothing about a Windows-only crash. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
    - **`maxInstances: 2`.** Targets the startup race directly. Be honest about what a result means: fewer crashes is a *mitigation* that costs wall-clock time, not a root-cause fix, and it must not land in this document as "fixed" if it lands as "papered over."
    - **A per-worker ChromeDriver cache directory.** Cheaper, and strictly more informative. The shared cache under `AppData\Local\Temp` is the stated hypothesis and nothing has yet tested it directly; giving each worker its own directory tests contention without paying the serialization cost, and unlike `maxInstances: 2` a positive result would actually *explain* the mechanism rather than just suppress the symptom.
 
    Remember the statistics: at a 1-in-40 base rate a clean 40-run batch is weak evidence, roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix.
+
+2. **Bump `actions/checkout`, `actions/setup-node` and `actions/upload-artifact` from `@v4` to `@v5`.** Every run warns that they target Node 20 and are being force-run on Node 24. This isn't an audit finding, just housekeeping, but worth doing before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19. Check it with a `ci-on-demand.yml` dispatch.
 
 Everything else on this list is closed except the two deferred findings below.
 
