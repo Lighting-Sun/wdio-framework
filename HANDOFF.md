@@ -1,8 +1,8 @@
 # Handoff — WebdriverIO framework audit remediation
 
-**Written:** 2026-09-23, current as of round 11 (replaces the 2026-09-22 handoff)
-**Branch:** `fix/audit-critical-findings` — ahead of `main`, **pushed to `origin`, not merged**
-**Working tree:** clean
+**Written:** 2026-09-23, current as of round 12 (replaces the round-11 handoff of the same day)
+**Integration:** `fix/audit-critical-findings` is **merged to `main`**, squash commit `9f18c20` via [PR #23](https://github.com/Lighting-Sun/wdio-framework/pull/23). New work starts from `main`, on a new branch.
+**Machines:** the rounds so far ran on **Windows, Node 24**. The round-12 docs update was written on **macOS, Node 26.8.1, without `gh`**. That matters for #29; see below.
 **Read first:** [audit.md](audit.md). It is the plan, the spec and the status tracker in one document.
 
 ---
@@ -15,7 +15,9 @@ A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://ww
 
 The one open finding is **#29** — diagnosed, narrowed, two untested experiments left. **#30 is closed by decision** (the CI trigger policy is intentional) and **#31 was fixed in round 11** (`.nvmrc` → 20.19.0, verified in CI). Both came out of round 10's first real CI run; see *CI status* below.
 
-Eleven rounds of work are on the branch — 33 commits, 37 files, +3,645/−1,486. Most rounds are two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. Round 10 is the exception: it changed no code, only ran CI for the first time and recorded what that exposed. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
+Eleven rounds of work went onto the branch, 34 commits in all, and landed on `main` as **one squash commit, `9f18c20`**. Most rounds are two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. Round 10 is the exception: it changed no code, only ran CI for the first time and recorded what that exposed. Round 12 also changed no code: it merged the branch and recorded `ci.yml`'s first runs.
+
+**Because of the squash, `main`'s history no longer shows the per-round commits or their commit messages, which hold the verification evidence.** They survive on `fix/audit-critical-findings`: `git log --oneline 10027e6..origin/fix/audit-critical-findings` lists them. **Don't delete that branch** without asking the owner, or that evidence becomes hard to reach. `audit.md` cites those short hashes.
 
 **Keep `audit.md` current.** It carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. That is how the next session knows what happened.
 
@@ -48,7 +50,7 @@ This matters more than any individual fix. The owner has consistently valued evi
 4. **Report honestly when a fix is wrong.** The `onWorkerEnd` hook was implemented backwards first and the verification run caught it. Finding #1's fix turned out to be incomplete for six rounds. Both were surfaced plainly and recorded in the audit, not quietly patched.
 5. **Say what was left untouched.** Each round lists the adjacent findings it did *not* fix, so the diff stays reviewable.
 6. **Commit messages carry the why and the verification evidence.** Read `git log` before writing one.
-7. Attribution on every commit: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
+7. Every commit carries a `Co-Authored-By:` trailer naming the model that did the work. Rounds 1–11 used `Claude Opus 5`; round 12 used `Claude Opus 5.5 (1M context)`. Use whatever the current session's attribution instruction specifies.
 
 ---
 
@@ -66,20 +68,20 @@ WDIO_LOG_LEVEL=info npm test             # raise log level without touching the 
 npm run open-allure                      # view the last report
 ```
 
-Pushing a feature branch starts **no** CI run — see #30, that is deliberate. To check a branch in real CI before opening a PR:
+Pushing a feature branch starts **no** CI run. That is deliberate (see #30). To check a branch in real CI before opening a PR:
 
 ```bash
 gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrome -f artifacts=true
 gh run watch <run-id> --exit-status
 ```
 
-`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
+`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx** and Chrome runs headless. Rounds 1–11 ran locally on Windows with Node 24; round 12 ran on macOS with Node 26.8.1. Either way, local Node is newer than CI's 20.19.0.
 
 ### CI status
 
-**CI has now run, twice, and both runs were green.** Before round 10 it never had — every CI change from round 8 had been written, reasoned about, and never executed.
+**Both workflows have now run, and every run was green.** Before round 10 neither had. Every CI change from round 8 had been written and reasoned about but never executed.
 
-**A feature-branch push starts no run at all, by design.** `ci.yml` triggers on pushes to `main` / `continous-integration` and on pull requests to `main`. This branch matches neither, so the pushes on 2026-09-23 started nothing. The owner confirmed that policy the same day — finding #30 is **closed, not open**. Do not expect a push to trigger CI, and do not "fix" the triggers.
+**A feature-branch push starts no run at all, by design.** `ci.yml` triggers on pushes to `main` / `continous-integration` and on pull requests to `main`. The audit branch matched neither, so its pushes on 2026-09-23 started nothing until PR #23 was opened. The owner confirmed that policy the same day — finding #30 is **closed, not open**. Do not expect a push to trigger CI, and do not "fix" the triggers.
 
 **To check a branch before a PR exists, dispatch `ci-on-demand.yml` against it.** Under this policy that is the supported path, not a workaround. The command is in the Commands section above.
 
@@ -87,14 +89,16 @@ gh run watch <run-id> --exit-status
 |---|---|---|
 | [35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) | 20.17.0 | Green in 44 s. First execution of every round-8 CI change. |
 | [35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334) | 20.19.0 | Green. Verified the #31 bump: `EBADENGINE` 14 → 0. |
+| [35889925746](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35889925746) | 20.19.0 | **`ci.yml`'s first run**, on PR #23 at `4205dc2`. Green in 51 s. |
+| [35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515) | 20.19.0 | `ci.yml` on `main` after the merge, at `9f18c20`. Green in 52 s. |
 
 The first run confirmed each round-8 change individually rather than resting on the green checkmark: `.nvmrc` resolving through `node-version-file`, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines where local gives 0, 11 tests passing on ubuntu, `onWorkerEnd` correctly silent on green, and the artifact genuinely uploading — 1,026,451 bytes, checked through the REST API rather than from the green step, because `if-no-files-found: warn` lets that step pass having uploaded nothing. The full evidence table is in `audit.md` under *CI verification*.
 
 **Three things to carry forward:**
 
-- **`ci.yml` itself has still never run.** Both dispatches exercise `ci-on-demand.yml` only. The two share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it — which under the #30 decision is the intended route, so it stays unproven until a PR exists.
+- **`ci.yml` is proven, with one gap.** On both of its runs every step succeeded, and the `allure-report` artifact uploaded (1,026,497 and 1,026,439 bytes), which was checked through the REST API. `git diff 4205dc2 9f18c20` is empty, so the merge changed nothing the PR run had tested. **The gap: nobody has read the test count out of a `ci.yml` log.** Job logs need an authenticated session, and the round-12 machine had no `gh`. The Test step passing means every spec passed. The count itself is still unchecked.
 - **A Node version bump cannot be verified on this machine.** Local is Node 24, where every engine range already passes, so `EBADENGINE` warnings do not reproduce here at all. A clean local install looks like evidence and is worth nothing; the count has to be read out of a CI install log. This is how #31 was verified.
-- **Two annotations appear on every run and are not ours to fix yet.** `actions/checkout@v4`, `setup-node@v4` and `upload-artifact@v4` target Node 20 and are being force-run on Node 24 — bump them to `@v5` when convenient. Separately, `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
+- **Two annotations appear on every run.** `actions/checkout@v4`, `setup-node@v4` and `upload-artifact@v4` target Node 20 and are being force-run on Node 24 — bump them to `@v5` when convenient. Separately, `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
 
 ---
 
@@ -119,6 +123,8 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 - **It is not specific to any spec file — this is settled, not inferred.** Three captures, three different victims: `filter.spec`, then `login.spec`, then `completePurchase.spec`. Every one had the same exit code, the same log truncated at exactly the same line, the same missing profile directory. The crash takes whichever worker loses the startup race. **Do not go hunting for a cause inside a spec** — the finding's original title said `filter.spec` and that was the most misleading thing about it.
 - **`@wdio/visual-service` is ruled out.** Removing it and re-running the loop reproduced the crash at the same rate with the same signature.
 - **The rate is roughly 1 run in 25–40**, per-run rather than per-spec. It also appeared on a routine verification run on 2026-09-23, so it is very much still live.
+
+**Every capture came from a Windows machine** (the exit code is a Windows status code, and the cache lives under `AppData`). **Only Windows can test the experiments below.** On macOS or Linux, the only useful result would be a crash, and even that would be a different crash from this one.
 
 **What is still unknown: the crash mechanism.** All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis, not a conclusion.
 
@@ -164,21 +170,34 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 ---
 
-## Known stale document, not yet addressed
+## Architecture and consulting docs — refreshed 2026-09-23
 
-**[consulting/.claude.md](consulting/.claude.md) has the same drift that finding #17 found in the architecture doc,** and nobody has been asked about it yet. It describes the project as "JavaScript ES6+ modules", refers to `tests/pages/page.js` and `[name].page.js` naming, documents test data as `JSON.parse(readFileSync(...))`, tells specs to load credentials from `tests/data/*.json`, and lists visual testing as an expertise area with "`@wdio/visual-service` is already configured with a baseline folder."
+`architecture/projectArchitecture.md`, `architecture/.claude.md` and `consulting/.claude.md` were regenerated at the owner's request after the merge, and checked claim by claim against the code at `9f18c20`.
 
-All of that is now wrong. It is a persona/instructions file rather than project documentation, so it was left alone rather than rewritten unasked — **raise it with the owner before touching it.**
+**The earlier warning here was out of date.** It said `consulting/.claude.md` still described a JavaScript project with visual testing. It didn't: it had already been rewritten around round 9. What was actually stale was its status line, plus a handful of claims in all three files that the code contradicts. Those are now corrected, and the code-level drift is listed under *Known Gaps* in `projectArchitecture.md`:
+
+- Specs call `expect(browser).toHaveUrl` 4 times, `cart.page.ts` calls `browser.waitUntil` (repeating a wait `clickAllIfExists` already does), and `login.page.ts` reads `browser.options`. The docs used to say pages and specs never touch `browser.*`.
+- 8 public read-once getters have no callers.
+- Not every factory method logs an Allure step, and the overview page reads the subtotal only (not tax or total).
+- The side-menu example used `'Logout'`; the code uses `'logout'`.
+
+**None of this drift was fixed in code.** It is documented, and each item is a small separate change for the owner to approve. The consulting doc recommends an `expectUrlContains` factory helper for the URL checks; that decision is the owner's and hasn't been made.
+
+**Then the rest of the documentation was brought into line in the same pass,** so nothing contradicts anything else before the PR: the root [.claude.md](.claude.md) (status, the `browser.*` rule, structure, commands), [README.md](README.md) (`npm test` instead of `npx wdio`, the Node 20.19.0 minimum, the `dev` and red-run-artifact caveats), [guides/documentationGuide.md](guides/documentationGuide.md) (its singleton example contradicted this project, and it now requires a verification stamp), and a status note on audit #17.
 
 ---
 
 ## Integration status
 
-The branch is **pushed** to `origin` (`github.com/Lighting-Sun/wdio-framework`), in sync with local HEAD. It is **not merged** and there is **no pull request**. The owner chose "keep the branch as-is" when offered merge / PR / keep, and pushing has not changed that.
+**Merged.** The owner opened [PR #23](https://github.com/Lighting-Sun/wdio-framework/pull/23) and squash-merged it to `main` on 2026-09-23 as `9f18c20`. `ci.yml` ran green on both the PR and the merge commit. That settles both reasons the handoff used to give for raising the PR: `ci.yml` has now run, and the 34 commits have been through a PR.
 
-**Pushing this branch is routine; merging or opening a PR is not.** Ask before either.
+**How future rounds should land:** branch off `main` and push. Pushing is routine. **Opening or merging a PR still needs the owner's approval each time.** Don't treat round 12's merge as standing permission.
 
-Two things make the PR question worth raising, and they are one decision rather than two:
+**`fix/audit-critical-findings` still exists on `origin`.** It's merged, but keep it: it holds the per-round commit history that the squash flattened (see *Where this stands*).
 
-- It is the only way `ci.yml` ever runs — see #30 and the CI status section.
-- The branch is **33 commits** deep and has never been read by anyone but the owner. That is a growing amount of unreviewed work on one line, and it grows every round.
+## Suggested next step
+
+1. **#29, on the Windows machine.** Start with the per-worker ChromeDriver cache directory, then try `maxInstances: 2`. Don't run the loop on macOS or Linux and call a clean result evidence.
+2. **Bump the three actions from `@v4` to `@v5`**, then check with a `ci-on-demand.yml` dispatch. Do this before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19.
+3. **Ask the owner about the code drift the architecture refresh documented** (see above): the URL-assertion helper, the redundant `waitUntil` in `cart.page.ts`, the 8 unused getters. Don't fix any of it unasked.
+4. Optionally, read the test count from the Test step log of [run 35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515) to close the one gap in `ci.yml`'s verification.

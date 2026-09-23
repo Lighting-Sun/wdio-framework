@@ -1,308 +1,335 @@
 # wdio-framework Architecture
 
+**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
+
 ## Purpose
 
-This document supports decisions about where new code belongs, how layers connect, and what constraints must be respected when extending the framework. The audience is any engineer adding tests, pages, components, or utilities to this project.
+This document is for deciding where new code belongs, how the layers connect, and which constraints hold when you extend the framework. It is written for any engineer adding tests, pages, components or utilities.
 
-**After reading this document you should be able to answer:**
+**After reading it you should be able to answer:**
 
-- Where does a new page class go, what must it extend, and how must it export?
-- Where does a new reusable UI fragment go vs. a new page method?
-- Why can't I call `$()` directly in a spec or page?
+- Where does a new page class go, what must it extend, and how must it be exported?
+- When does a reusable UI fragment get its own component, and when is it just a page method?
+- Why can't I call `$()` in a spec or a page, and where *is* `browser.*` allowed?
 - When does a helper belong in `tests/support/` rather than `tests/utils/`?
-- What do I need to change if I add a new test environment?
+- What has to change if I add a test environment?
 
-**Maintenance rule:** Update this document when a new layer is added, a layer's responsibility changes, a new cross-cutting concern is introduced, or a known gap is closed. A document that lies is worse than no document — this one drifted badly once, claiming coverage that did not exist and describing files under extensions they no longer had.
+**Maintenance rule:** update this document in the same commit as any change that adds a layer, moves a responsibility, adds a cross-cutting concern, or opens or closes a known gap. Then update the *Verified against the code* line. Treat drift in this document as a bug: it has happened twice already (audit #17, and again before this revision).
 
 ---
 
 ## Layer Overview
 
-Seven layers. Dependencies flow in one direction — no cycles.
+Seven layers, with dependencies in one direction only and no cycles. That is more layers than usual, on purpose: Test Support and Infrastructure each have a boundary that people kept getting wrong while they were folded into other layers.
 
 ```
-Infrastructure (wdio.conf.ts, workflows, lint/format config)
-  └── orchestrates ──► Test Specification
-                            ├──► Test Support ──► Page Objects
-                            ├──► Page Objects ──┬──► UI Components ──► Browser Interaction ──► WebdriverIO
-                            │                   └──────────────────────► Browser Interaction
-                            └──► Pure Utilities + Data
+Infrastructure (wdio.conf.ts, workflows, tsc / ESLint / Prettier config)
+  └── runs ──► Test Specification
+                 ├──► Test Support ──────► Page Objects
+                 ├──► Page Objects ──┬──► UI Components ──► Browser Interaction ──► WebdriverIO + Allure
+                 │                   └──────────────────► Browser Interaction
+                 └──► Pure Utilities + Data
 ```
 
-**Entry point:** Test Specification — nothing in the project imports specs.
-**Foundation:** Browser Interaction, and Pure Utilities + Data — these call nothing else in the project.
+Three edges the tree cannot draw, all of them real imports:
 
-Everything is TypeScript. `strict` is on, the project type-checks with zero errors, and `npm run typecheck` runs in CI before the suite.
+- **Page Objects → Pure Utilities.** `inventory.page.ts` imports `UtilsMethods.toProductSlug`.
+- **Test Support → Data.** `credentials.support.ts` falls back to `placeHolderData.json`.
+- **Test Support → WebdriverIO**, directly, for session state. This is the one sanctioned bypass of the factory (see Layer 2).
+
+**Entry point:** Test Specification. Nothing in the project imports a spec.
+**Foundation:** Browser Interaction, and Pure Utilities + Data. Neither imports anything else in the project.
+
+Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typecheck` and `npm run lint` both run in CI before the suite.
 
 ---
 
 ## Layer 1 — Test Specification
 
-**Responsibility:** Owns the test scenarios, assertions, and the ordered sequence of user actions that verify application behavior.
+**Responsibility:** owns the scenarios: the order of user actions and what is asserted about the result.
 
 **Rules:**
 
-- No raw WebdriverIO calls (`$()`, `$$()`, `browser.*`) in specs — all interactions go through page objects or Test Support
-- **Specs never receive raw elements.** Assertions go through the factory's retrying helpers (`expectText`, `expectTextsFromElements`, `expectEventuallyEquals`), exposed via page methods such as `expectTextFromPrices`. This keeps the no-`$()`-outside-the-factory rule intact and keeps Allure logging in one place
-- Page objects are imported as singleton instances — never instantiated inside a spec
-- Credentials come from `tests/support/credentials.support.ts`, never from the JSON file directly. Other fixture data (products, personal info, expected messages) is imported from `tests/data/placeHolderData.json` as a typed JSON module: `import data from '../data/placeHolderData.json' with { type: 'json' }`
-- **Every `beforeEach` calls `resetBrowserState()`, after navigating.** One browser session serves a whole spec file, so without this, state leaks between `it` blocks
-- **Cleanup belongs in hooks, never at the bottom of a test body.** A failing test does not run to completion, so trailing cleanup silently does not happen and the next test inherits dirty state
-- Smoke tests must include `@smoke` in the `it()` title — this is how the CI on-demand grep filter finds them
-- No randomized test data. A failure has to be reproducible from the test name alone
+- **No `$()` or `$$()` in a spec**, ever. Interactions go through page objects or Test Support.
+- **Specs never receive raw elements.** Assertions go through page methods backed by the factory's retrying helpers (`expectItemCartNames`, `expectTextFromPrices`, `expectCompletePurchaseText`, …).
+- **The only `browser` reference a spec may make is a URL assertion**, `await expect(browser).toHaveUrl(expect.stringContaining('/path'))`. This is current practice (4 call sites) rather than a documented decision. See *Known Gaps*.
+- Page objects are imported as singletons and never instantiated in a spec.
+- Credentials come from `tests/support/credentials.support.ts`, never from the JSON. Other fixture data comes from `tests/data/placeHolderData.json` as a typed JSON module: `import data from '../data/placeHolderData.json' with { type: 'json' }`.
+- **Every `beforeEach` calls `loginPage.openPage()` and then `resetBrowserState()`**, in that order. One browser session serves a whole spec file, and storage is origin-scoped.
+- **Cleanup belongs in hooks, never at the bottom of a test body.** A failing test never reaches trailing cleanup.
+- Smoke tests carry `@smoke` in the `it()` title. That is how CI's grep finds them.
+- No randomized data. A failure has to be reproducible from the test name alone.
 
-**Inventory:**
+**Inventory:** 4 spec files, 11 tests, about 6 s for a full local run.
 
-| File | What it tests |
-|------|---------------|
-| `tests/specs/login.spec.ts` | Valid login, locked-out user error message, logout via side menu |
-| `tests/specs/addProductsToCart.spec.ts` | Adding a fixed list of items, adding one specific item, removing every item |
-| `tests/specs/completePurchase.spec.ts` | Full e2e flow: login → add items → cart → checkout form → order overview → confirmation |
-| `tests/specs/filter.spec.ts` | All four product sort options (`lohi`, `hilo`, `az`, `za`), data-driven |
+| File | Tests | What it covers |
+|------|------:|----------------|
+| `tests/specs/login.spec.ts` | 3 | Valid login `@smoke`, locked-out error message, logout through the side menu `@smoke` |
+| `tests/specs/addProductsToCart.spec.ts` | 3 | Adding a fixed product list, one specific product `@smoke`, removing every item |
+| `tests/specs/completePurchase.spec.ts` | 1 | End to end: login → add → cart → checkout form → overview (names, prices, subtotal) → confirmation |
+| `tests/specs/filter.spec.ts` | 4 | All four sort options (`lohi`, `hilo`, `az`, `za`), data-driven from one scenario table |
 
-Currently 4 spec files, 11 tests, around 6 seconds for a full run.
+**Tradeoff:** `filter.spec.ts` derives its expected order by sorting what the page is already showing, not from a hardcoded list. Adding a product doesn't break it, and a broken sort still does. The cost: if the page loaded the wrong *set* of products, this spec would not notice.
 
 ---
 
 ## Layer 2 — Test Support
 
-**Responsibility:** Reusable *preconditions* and cross-cutting test state — as distinct from page objects, which model pages. A page object models a PAGE; a flow models a STATE the test needs to start from.
+**Responsibility:** reusable *preconditions* and session state. A page object models a PAGE; a flow models a STATE the test starts from.
 
 **Rules:**
 
-- **A fixture must never hide the thing under test.** A test whose subject *is* logging in drives the login page directly; only tests that need to *be* logged in use `loginAsStandardUser()`. The two login tests in `login.spec.ts` are intentionally not converted
-- Support functions may call page objects and `browser.*` — this is the one layer above the factory that is allowed browser access, because session state is not a page concern
-- Credentials read from the environment with committed fixtures as fallback, so pointing this framework at a real application is a config change rather than a security incident
+- **A fixture must never hide the thing under test.** Only tests that need to *be* logged in use `loginAsStandardUser()`. The two tests in `login.spec.ts` whose subject is logging in drive the login page directly, on purpose.
+- **Every flow asserts that it arrived** (URL and page title) before returning. That way a broken precondition fails as a precondition, not three steps later as a mystery.
+- This is the only layer above the factory allowed to use `browser.*`, because session state is not a page concern.
+- Credentials are read from the environment, with the committed JSON as fallback. Pointing the framework at a real application then becomes a config change, not a security incident.
 
 **Inventory:**
 
 | File | What it provides |
 |------|------------------|
-| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()` — preconditions that assert they arrived |
-| `tests/support/session.support.ts` | `resetBrowserState()` — clears cookies, session and local storage, then refreshes |
-| `tests/support/credentials.support.ts` | `validUser`, `lockedOutUser` — `SAUCE_USERNAME` / `SAUCE_PASSWORD` (and the `LOCKED_OUT_` pair) with JSON fallback |
+| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()`: preconditions that assert they arrived |
+| `tests/support/session.support.ts` | `resetBrowserState()`: deletes cookies, clears session and local storage, refreshes |
+| `tests/support/credentials.support.ts` | `validUser`, `lockedOutUser`: `SAUCE_USERNAME` / `SAUCE_PASSWORD` and the `SAUCE_LOCKED_OUT_` pair, with JSON fallback |
 
 ---
 
 ## Layer 3 — Page Objects
 
-**Responsibility:** Models each application page — owns its locators, encapsulates user-facing actions, and handles navigation to that page.
+**Responsibility:** models one application page: its locators, its user-facing actions, and navigation to it.
 
 **Rules:**
 
-- Every page class extends `Page` (`tests/pages/page.ts`), which provides `wdioFactory` and `open(path)`
-- Every page exports a singleton instance: `export default new XxxPage()`
-- All locators are objects with exactly `{ selector, description }` — no bare strings. The description is what appears in failure messages and Allure steps, so write it for someone reading a red build
-- All browser interactions go through `this.wdioFactory.*` — never `$()` or `browser.*` directly
-- Pages that include the header UI declare `header = new Header()` as a class property
-- Dynamic locators use `${value}` as a placeholder, resolved via `this.wdioFactory.getSelectorByValue(locator, value)` before being passed to any other factory method
-- **Locators key off SauceDemo's `data-test` attributes, not visible text.** `UtilsMethods.toProductSlug()` turns `"Sauce Labs Onesie"` into `sauce-labs-onesie`, and `:has(button[data-test$='-sauce-labs-onesie'])` finds that product's card. The `$=` suffix match is deliberate: it survives the button flipping between `add-to-cart-` and `remove-`
-- Where a page exposes a list, it should expose a **retrying** assertion for that list, not just a getter. An action that re-renders the grid races a single read
+- Every page extends `Page` (`tests/pages/page.ts`), which provides `this.wdioFactory` and `open(path)`.
+- Every page exports a singleton: `export default new XxxPage()`.
+- Every locator is `{ selector, description }`, matching the factory's exported `Locator` interface. The `locators` objects aren't annotated with it; the factory's parameter types enforce the shape. The description appears in failure messages and Allure steps, so write it for someone reading a red build.
+- All interaction goes through `this.wdioFactory.*`. **No `$()` or `$$()`** (this holds today). The only `browser.*` call a page may make is `Page.open()`. Two pages currently break this; see *Known Gaps*.
+- Pages with the app header declare `header = new Header()`. Every page except `LoginPage` does.
+- Dynamic locators put `${value}` in both selector and description, resolved with `this.wdioFactory.getSelectorByValue(locator, value)` before any other factory call.
+- **Locators never match on visible text. Prefer SauceDemo's `data-test` attributes** for anything new. Some older locators use ids or classes (`#login-button`, `#first-name`, `.bm-burger-button`, `span.title`, `select.product_sort_container`), which are stable enough on SauceDemo but not the model to copy. `UtilsMethods.toProductSlug()` turns `"Sauce Labs Onesie"` into `sauce-labs-onesie`, and `:has(button[data-test$='-sauce-labs-onesie'])` finds that card. The `$=` suffix match is deliberate: it survives the button flipping between `add-to-cart-` and `remove-`.
+- **Where a page exposes a list, it exposes a retrying `expect…` method for it**, not just a getter. An action that re-renders the list races a single read.
 
 **Inventory:**
 
 | File | What it owns |
 |------|--------------|
-| `tests/pages/page.ts` | Base class: initializes `WdioFactoryUtils`, provides `open(path)` navigation |
-| `tests/pages/login.page.ts` | Username/password inputs, login button, error message; `openPage()`, `loginWithCredentials()` |
-| `tests/pages/inventory.page.ts` | Product grid, dynamic add-to-cart buttons, name and price lists with retrying assertions; owns `Header` |
-| `tests/pages/cart.page.ts` | Cart item names and prices, remove-all, checkout button; owns `Header` |
-| `tests/pages/checkout.page.ts` | First name, last name, postal code inputs, continue button; owns `Header` |
-| `tests/pages/overview.page.ts` | Item list, subtotal/tax/total retrieval; owns `Header` |
-| `tests/pages/complete.page.ts` | Confirmation header text retrieval; owns `Header` |
+| `tests/pages/page.ts` | Base class: creates `WdioFactoryUtils`, provides `open(path)` |
+| `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
+| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions; dynamic per-product name, price and add-to-cart locators; `addItemsToCartByNames()`; owns `Header` |
+| `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeAllItemsFromCart()`, checkout button; owns `Header` |
+| `tests/pages/checkout.page.ts` | First name, last name, postal code, continue; `fillPersonalInformationForm()`; owns `Header` |
+| `tests/pages/overview.page.ts` | Item names and prices with retrying assertions, numeric prices, **subtotal** (no tax or total), finish button; owns `Header` |
+| `tests/pages/complete.page.ts` | Confirmation header with a retrying assertion; owns `Header` |
 
-**Tradeoff:** Singleton exports simplify imports — specs reference `loginPage` without instantiating it. This is safe under the current parallel setup because WebdriverIO runs each spec file in its **own worker process**, so every worker gets its own module instances and nothing is shared across them. It would become unsafe only if multiple spec files ever shared one process.
+**Tradeoff:** singleton exports make imports simple. They are safe because WebdriverIO runs each spec file in its **own worker process**, so each worker has its own module instances. They would become unsafe only if several spec files ever shared a process.
 
 ---
 
 ## Layer 4 — UI Components
 
-**Responsibility:** Encapsulates reusable UI fragments that appear across multiple pages, exposing them as composable objects that pages own.
+**Responsibility:** fragments that appear on more than one page, exposed as objects the pages own.
 
 **Rules:**
 
-- Every component class extends `BaseComponent` (`tests/components/base.component.ts`)
-- All browser interactions go through `this.wdioFactoryUtils.*` — never `$()` directly
-- `Header` owns `SideMenu` as a class property: `sideMenu = new SideMenu()` — callers access it via `page.header.sideMenu`
-- Components are never exported as singletons — they are instantiated inside page class bodies
+- Every component extends `BaseComponent` (`tests/components/base.component.ts`) and interacts only through `this.wdioFactoryUtils.*`. The property is named differently from the pages' `wdioFactory`; that inconsistency is historical.
+- Components are never singletons. Pages instantiate them in the class body.
+- `Header` owns `SideMenu` as `sideMenu = new SideMenu()`, reached as `page.header.sideMenu`.
+- Side-menu options are addressed by their `data-test` slug in lowercase: `clickOnSideMenuOptionByValue('logout')`.
 
 **Inventory:**
 
 | File | What it owns |
 |------|--------------|
-| `tests/components/base.component.ts` | Base class: initializes `WdioFactoryUtils` instance |
-| `tests/components/header.component.ts` | Cart icon, burger menu button, page title, sort dropdown; owns `SideMenu` |
-| `tests/components/sidemenu.component.ts` | Side menu links; `clickOnSideMenuOptionByValue(option)` |
+| `tests/components/base.component.ts` | Base class: creates `WdioFactoryUtils` |
+| `tests/components/header.component.ts` | Burger menu button, cart button, page title with `expectPageTitle()`, sort dropdown; owns `SideMenu` |
+| `tests/components/sidemenu.component.ts` | Dynamic `${value}-sidebar-link` locator; `clickOnSideMenuOptionByValue()` |
+
+**Tradeoff:** the sort dropdown lives on `Header` even though only the inventory page shows it. That keeps one header model, but `cartPage.header.clickOnSortFilterDropdownOption()` type-checks and then times out. Put new inventory-only controls on `inventory.page.ts`, not on `Header`.
 
 ---
 
 ## Layer 5 — Browser Interaction
 
-**Responsibility:** The only sanctioned interface to the WebdriverIO API — wraps every DOM operation with wait logic and Allure step logging.
+**Responsibility:** the only sanctioned route to WebdriverIO element APIs. It wraps DOM operations with explicit waits, readable timeout messages and Allure steps.
 
 **Rules:**
 
-- No page, component or spec calls `$()`, `$$()` or `browser.*` directly. The one exception is Test Support, for session-level state
-- Every public method logs an Allure **step** after executing — do not call Allure APIs from outside this layer. Allure's `addStep` and `addAttachment` return promises and **must be awaited**
-- Dynamic selector resolution (`getSelectorByValue`) happens before passing a locator to any other method in this layer
-- Assertions assert on the **element**, not on an already-resolved string, so `expect-webdriverio` re-queries until the condition holds. `expect(await getText())` checks once and races the page
+- `$()` and `$$()` appear in this file and nowhere else.
+- **Every method that acts or asserts logs an Allure step**, and every step is awaited: `addStep` and `addAttachment` return promises. The pure or read-only helpers (`getSelectorByValue`, `getElements`, `getTextFromElements`) deliberately log nothing.
+- Don't call Allure from pages, components or specs. If more context is needed, extend this class.
+- **Assertions assert on the element, not on a resolved string**, so `expect-webdriverio` retries. `expect(await getText()).toEqual(x)` checks once and races the page.
+- Waits are bounded. Nothing in this file loops without a ceiling.
 
-**Inventory:**
+**Inventory** (`tests/utils/wdioFactory.utils.ts`):
 
-| Method | What it does |
+| Member | What it does |
 |--------|--------------|
-| `click(element)` | Waits for clickable, clicks |
-| `setValue(element, value)` | Waits for enabled, sets the value |
-| `getText(element)` | Waits for displayed, returns text |
-| `getElements(elements)` | Returns all DOM elements matching the selector |
-| `getTextFromElements(elements)` | Returns the text of every match |
+| `Locator` (interface) | `{ selector, description }`, the shape every locator in the project uses |
+| `click(element)` | Waits for clickable, clicks, logs |
+| `setValue(element, value)` | Waits for enabled, sets the value (no implicit click), logs |
+| `getText(element)` | Waits for displayed, returns text, logs |
+| `getElements(elements)` | All matches as an array. **Its `await` is load-bearing;** see below |
+| `getTextFromElements(elements)` | Text of every match, read once |
 | `expectText(element, expected)` | Retrying assertion on one element's text |
-| `expectEventuallyEquals(label, readValues, expected)` | Re-reads a collected list until it matches, then asserts for a readable diff |
-| `expectTextsFromElements(elements, expected)` | Retrying comparison of a group's text |
-| `selectOptionFromSelect(element, attr, value)` | Selects a `<select>` option by attribute match |
-| `clickAllIfExists(element)` | Clicks every match, **bounded by the initial count**, then waits for zero to remain |
-| `getSelectorByValue(element, value)` | Substitutes `${value}` into selector and description; throws on a missing placeholder or on quote characters |
+| `expectEventuallyEquals(label, readValues, expected)` | Re-reads a collected list until it matches (10 s), then asserts once more for a readable diff |
+| `expectTextsFromElements(elements, expected)` | `expectEventuallyEquals` over a locator's texts |
+| `selectOptionFromSelect(element, attr, value)` | Waits for displayed, selects by attribute |
+| `clickAllIfExists(element)` | Clicks each match, **bounded by the initial count** (2 s probe), then waits for none to remain |
+| `getSelectorByValue(element, value)` | Substitutes `${value}` into selector and description; **throws** on a missing placeholder or on quote characters |
 
-File: `tests/utils/wdioFactory.utils.ts`
+**Two traps, both commented in the code. Read them before editing:**
 
-**Two traps documented in the code — read them before editing this file:**
-
-- `getSelectorByValue` **rejects** quote characters rather than escaping them. Correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently
-- The `await` on `$$(...)` in `getElements` is **load-bearing**, even though `@typescript-eslint/await-thenable` flags it. WDIO types `ChainablePromiseArray` as not-a-Promise; the runtime object is one. Without the await, `.length` is a Promise and every loop over the result silently does nothing. There is a scoped `eslint-disable-next-line` on it
+- `getSelectorByValue` **rejects** quotes rather than escaping them. Correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently.
+- The `await` on `$$(...)` in `getElements` is **load-bearing**, even though `@typescript-eslint/await-thenable` flags it. WDIO types `ChainablePromiseArray` as not-a-Promise, but the runtime object is one. Without the await, `.length` is a Promise and every loop over it silently does nothing, so tests would pass while doing nothing. A scoped `eslint-disable-next-line` covers it.
 
 ---
 
 ## Layer 6 — Pure Utilities + Data
 
-**Responsibility:** Non-browser computation and static fixture data.
+**Responsibility:** computation with no browser, and static fixture data.
 
 **Rules:**
 
-- Utility functions must be pure — no browser calls, no side effects, no WebdriverIO imports
-- Sort helpers return a **copy**. `Array.prototype.sort` mutates in place, which would silently reorder the caller's array
-- Reductions pass an initial value. `reduce` with none throws on an empty array — an empty cart is a real case
-- Fixture data is imported as a typed JSON module, not read with `readFileSync`. The old form was untyped and resolved relative to the working directory
+- Utilities are pure: no browser calls, no WebdriverIO imports, no side effects.
+- Sort helpers return a **copy**. `Array.prototype.sort` mutates in place.
+- Reductions pass an initial value. `reduce` with none throws on an empty array, and an empty cart is a real case.
+- Fixture data is a typed JSON import, never `readFileSync`, which was untyped and resolved against the working directory.
 
 **Inventory:**
 
 | File | What it provides |
 |------|------------------|
 | `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
-| `tests/data/placeHolderData.json` | Fixture users (fallback only), login error string, cart product lists, checkout personal info |
+| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, checkout `personalInfo` |
 
-**Tradeoff:** A single data file covering all test data is simple but has no mechanism for environment-specific values. As the suite grows or environments diverge, this file will need splitting per environment.
+**Tradeoff:** one data file is simple, but it can't hold per-environment values. It will need splitting when environments diverge.
 
 ---
 
 ## Layer 7 — Infrastructure
 
-**Responsibility:** Configures the WebdriverIO runner, the static checks, and the CI pipelines.
+**Responsibility:** configures the runner, the static checks and the CI pipelines.
 
 **Rules:**
 
-- The config object is typed as `WebdriverIO.Config`, so a typo'd key fails the build instead of being silently ignored
-- Suite definitions (`regression`, `loginAndPurchase`) live in `wdio.conf.ts` — CI references suite names, never ad-hoc file globs. **`smoke` is deliberately not a suite:** `@smoke` tags individual tests across several files, so it stays a `--mochaOpts.grep`. A suite entry would select whole files and quietly run more than was asked for
-- The `onPrepare` hook cleans the Allure results directory before each run — never remove it
-- The `afterTest` hook attaches a screenshot on failure — never remove it, and **keep the `await`**
-- `onWorkerEnd` reports any spec that consumed a retry. Its `retries` argument is the budget **remaining**, not the number used; the correct test is `SPEC_FILE_RETRIES - retries > 0`. Reading it the other way reports every spec on a green run as flaky
-- Environment selection (`--env qa` / `--env dev`) comes from CI inputs or CLI flags, never hardcoded
-- New environments require a new entry in the `wdio.conf.ts` baseUrl map and a new option in the `ci-on-demand.yml` environment input
-- Workflow inputs are passed through `env:` and quoted at the point of use, so a future free-text input cannot become shell injection
-- Node version lives in `.nvmrc` and both workflows read it with `node-version-file` — one source of truth
+- The config is typed `WebdriverIO.Config`, so a mistyped key fails the typecheck instead of being ignored.
+- Suites (`regression`, `loginAndPurchase`) live in `wdio.conf.ts`, and CI refers to suites by name. **`smoke` is deliberately not a suite.** `@smoke` tags individual tests across files, so it stays `--mochaOpts.grep smoke`; a suite would select whole files.
+- `onPrepare` wipes `reports/allure` before each run. `afterTest` attaches a screenshot on failure; **keep its `await`**. `onComplete` generates the HTML report with a 60 s ceiling.
+- `specFileRetries: 1`, deferred. `onWorkerEnd` names any spec that used a retry. Its `retries` argument is the budget **remaining**, so the test is `SPEC_FILE_RETRIES - retries > 0`. Reading it the other way flags every green spec as flaky.
+- `logLevel` defaults to `error` and is raised by `WDIO_LOG_LEVEL` (CI sets `info`) without a code change.
+- Environment (`--env qa|dev`) and browser (`--browser chrome|firefox`) come from CLI flags, with `qa` and `chrome` as defaults. Unknown values fall back silently to the defaults.
+- A new environment needs an entry in the `environments` map in `wdio.conf.ts` and an option in `ci-on-demand.yml`'s `environment` input.
+- Workflow inputs go through `env:` and are quoted where used, so a future free-text input can't become shell injection.
+- `.nvmrc` is the only source of the Node version. Both workflows read it with `node-version-file`.
+- **CI trigger policy (owner decision, audit #30):** `ci.yml` runs on pull requests to `main` and on pushes to `main`, never on feature-branch pushes. To check a branch before a PR, dispatch `ci-on-demand.yml`.
 
 **Inventory:**
 
 | File | What it configures |
 |------|--------------------|
-| `wdio.conf.ts` | Runner, suites, browsers (Chrome/Firefox headless), timeouts, env-driven `logLevel`, `specFileRetries`, Allure + Spec reporters, lifecycle hooks |
-| `eslint.config.js` | Flat config: recommended JS + TypeScript rules, `eslint-plugin-wdio` on `tests/`, three type-aware rules, Prettier compatibility last |
-| `.prettierrc` / `.prettierignore` | Formatting. Scoped to code — `*.md` and `.github` are deliberately excluded |
-| `.nvmrc` | Node 20.19.0, read by both workflows |
-| `.github/workflows/ci.yml` | Push/PR to main: typecheck → lint → full regression on QA → Allure artifact |
-| `.github/workflows/ci-on-demand.yml` | Manual dispatch: configurable env, browser, suite; one Test step that builds its own arguments |
+| `wdio.conf.ts` | Runner, specs, suites, `maxInstances: 10`, env and browser maps (headless Chrome/Firefox), timeouts, `logLevel`, retries, Spec + Allure reporters, the four lifecycle hooks |
+| `package.json` | Scripts (`test`, `typecheck`, `lint`, `lint:fix`, `format`, `format:check`, Allure), `engines.node >=20.19.0`, ESM |
+| `tsconfig.json` | `strict`, `NodeNext`, `resolveJsonModule`, WDIO and Mocha global types |
+| `allure-commandline.d.ts` | Type declaration for the untyped `allure-commandline` package used by `onComplete` |
+| `eslint.config.js` | Flat config: JS + TS recommended, four type-aware rules (`no-floating-promises`, `await-thenable`, `require-await`, `no-shadow`), `eslint-plugin-wdio` on `tests/`, Prettier compatibility last |
+| `.prettierrc` / `.prettierignore` | Formatting for code only. `*.md` and `.github` are excluded on purpose |
+| `.nvmrc` | Node 20.19.0 |
+| `.github/workflows/ci.yml` | PR to `main`, push to `main` (and the dead `continous-integration` branch): typecheck → lint → full suite on QA, Chrome → Allure artifact |
+| `.github/workflows/ci-on-demand.yml` | Manual dispatch: env, browser, optional suite or `smoke` grep; one Test step that builds its own arguments; optional artifact |
 
 ---
 
 ## Cross-Cutting Concerns
 
-### Allure Logging
+### Allure logging
 
-- **Where:** Centralized in `wdioFactory.utils.ts` — every method attaches a step
-- **Rule:** Do not call `addStep` or `addAttachment` from pages, components or specs. If richer context is needed, extend `WdioFactoryUtils`. Always `await` them — they return promises, and an unawaited attachment can be lost during teardown
+- **Where:** only in `wdioFactory.utils.ts` (steps) and `wdio.conf.ts` (failure screenshot, report generation). WDIO's own step and screenshot reporting is disabled so the factory steps are the whole story.
+- **Rule:** no Allure calls anywhere else. Always await them.
 
-### Test Data
+### Waiting and assertions
 
-- **Where:** `tests/data/placeHolderData.json`, imported as a typed JSON module; credentials via `tests/support/credentials.support.ts`
-- **Rule:** No hardcoded user-facing strings in `it()` bodies, and no randomized data
+- **Where:** the factory. Element waits use `waitforTimeout` (10 s); list assertions use `expectEventuallyEquals` (10 s); the Mocha test timeout is 60 s.
+- **Rule:** assert on something that retries. If you need a new assertion shape, add a factory helper and a page method; don't read once and compare in the spec.
 
-### Naming Conventions
+### Test data and credentials
 
-- **Where:** Enforced by team convention plus ESLint
-- **Rule:** `[name].page.ts` · `[name].component.ts` · `[name].spec.ts` · `[name].support.ts` · `[name].utils.ts`
-- **No Hungarian prefixes.** The TypeScript signature carries the type; `strObjElement` says nothing `element: Locator` does not
+- **Where:** `tests/data/placeHolderData.json` (typed import) and `tests/support/credentials.support.ts`.
+- **Rule:** no user-facing strings hardcoded in `it()` bodies beyond page titles and URL fragments, and no randomness.
 
-### Test Tagging
+### Environment configuration
 
-- **Where:** Embedded in `it()` titles (`@smoke`)
-- **Rule:** Tag `@smoke` only for a critical happy path that must pass before deployment
+- **Where:** `wdio.conf.ts` reads `--env` to pick `baseUrl`. `loginPage.openPage()` opens it.
+- **Rule:** pages and specs never read `process.env`. `credentials.support.ts` is the one deliberate exception, and only for credentials.
 
-### Environment Configuration
+### Naming
 
-- **Where:** `wdio.conf.ts` reads the `--env` CLI flag to select the base URL
-- **Rule:** Environment is injected at the runner level — pages and specs never read `process.env` for URLs. `tests/support/credentials.support.ts` is the single deliberate exception, and only for credentials
+- **Where:** team convention; `@typescript-eslint/no-shadow` catches the collisions renames create.
+- **Rule:** `[name].page.ts` · `[name].component.ts` · `[name].spec.ts` · `[name].support.ts` · `[name].utils.ts` · `[name].json`. **No Hungarian prefixes**: the type signature carries the type.
 
-### Static Checks
+### Tagging
 
-- **Where:** `npm run typecheck`, `npm run lint`, `npm run format:check`; the first two run in CI before the suite
-- **Rule:** Both must be clean before a commit. After any bulk rename, run the typecheck — a rename once made a parameter and a local share a name, and only the compiler caught it
+- **Where:** `it()` titles.
+- **Rule:** tag `@smoke` only for a critical happy path that must pass before a deploy. There are three today.
+
+### Static checks
+
+- **Where:** `npm run typecheck`, `npm run lint`, `npm run format:check`. The first two run in both workflows before the suite.
+- **Rule:** both must be clean before any commit. After a bulk rename, run the typecheck, because a rename once made a parameter and a local share a name and only the compiler caught it.
 
 ---
 
 ## Execution Flow — Golden Path: Complete Purchase
 
-The most complete flow across all layers.
-
 ```
-Infrastructure (wdio.conf.ts)
-  └── Mocha runner loads completePurchase.spec.ts
+Infrastructure: wdio.conf.ts
+  ├── onPrepare: wipe reports/allure
+  └── worker (own process, own singletons) runs completePurchase.spec.ts
         └── Test Specification
-              ├── Pure Utilities + Data: placeHolderData.json via typed JSON import
-              │
-              ├── Test Support: resetBrowserState() in beforeEach   ← after navigation; storage is origin-scoped
+              ├── beforeEach
+              │     ├── Page Objects: loginPage.openPage() → Page.open(baseUrl)      ← --env picked baseUrl
+              │     └── Test Support: resetBrowserState()                            ← after navigation; storage is origin-scoped
               │
               ├── Test Support: loginAsStandardUser()
-              │     ├── credentials.support.ts                      ← env var, or JSON fallback
-              │     └── Page Objects (loginPage.loginWithCredentials)
-              │           └── Browser Interaction: setValue, click   ← Allure step per call
-              │                 └── WebdriverIO
+              │     ├── credentials.support → env var or JSON fallback
+              │     ├── Page Objects: loginPage.loginWithCredentials()
+              │     │     └── Browser Interaction: setValue ×2, click                ← Allure step per call
+              │     └── asserts URL /inventory + header.expectPageTitle('Products')
               │
-              ├── Page Objects (inventoryPage.addItemsToCartByNames)
-              │     ├── Browser Interaction: getSelectorByValue      ← ${value} resolved, input validated
-              │     └── Browser Interaction: click
+              ├── Page Objects: inventoryPage.addItemsToCartByNames(data.cartProducts)
+              │     ├── Pure Utilities: toProductSlug(name)
+              │     └── Browser Interaction: getSelectorByValue → getText ×2 → click   ← placeholder + quote validation
               │
-              ├── Test Support: openCart()
-              │     └── UI Components (header.component)
-              │           └── Browser Interaction: click
+              ├── Test Support: openCart() → UI Components: header → Browser Interaction: click
               │
-              ├── Page Objects (cartPage → checkoutPage → overviewPage)
-              │     └── Browser Interaction at each step
+              ├── Page Objects: cartPage.expectItemCartNames / Prices
+              │     └── Browser Interaction: expectTextsFromElements                  ← retries up to 10 s
               │
-              ├── Pure Utilities (sumArrAndFixPrecision)             ← pure computation, no browser
+              ├── Page Objects: checkoutPage.fillPersonalInformationForm → overviewPage.expect…
+              │     (spec asserts each URL with expect(browser).toHaveUrl)
               │
-              └── Test Specification: assert the confirmation message
-                    └── Page Objects (completePage)
-                          └── Browser Interaction: expectText        ← retrying assertion, not a single read
+              ├── Pure Utilities: sumArrAndFixPrecision(prices) vs fixNumberPrecision(subtotal)
+              │
+              └── Page Objects: completePage.expectCompletePurchaseText
+                    └── Browser Interaction: expectText                             ← retrying, not a single read
+  ├── afterTest: on failure, screenshot → awaited Allure attachment
+  ├── onWorkerEnd: names the spec if it used a retry
+  └── onComplete: allure generate → reports/allure/allure-report (60 s ceiling)
 ```
 
 ---
 
 ## Known Gaps
 
+Only gaps that change how new code should be written.
+
 | Area | Status |
 |------|--------|
-| Rare worker crash under parallel load | Roughly 1 full run in 40, a worker process dies during ChromeDriver startup with Windows exit code `0xC0000409`, before any test runs — so there is no Allure result and no screenshot, and whichever spec that worker held is reported as failed. Not specific to any spec file. `@wdio/visual-service` has been ruled out; `maxInstances: 2` is the next untested experiment |
-| CI artifact on a red run | The Allure upload step has no `if: always()`, so it is skipped when tests fail — a report you only get on green runs. Deferred by decision; read the Actions job log instead |
-| `--env dev` | Points at `saucedemo.com/v1/`, which is not a working target. Treat `dev` as unsupported and run against `qa`. Deferred by decision |
-| Environment-specific test data | Single `placeHolderData.json` — no mechanism for per-environment values |
-| Side menu coverage | `clickOnSideMenuOptionByValue()` is only exercised for logout. About and Reset App State have no coverage |
-| Unit test layer | There is none. The pure functions in `utilsMethods.utils.ts` and the input validation in `getSelectorByValue` are only covered transitively through e2e runs |
+| Rare worker crash (audit #29, **open**) | About 1 full run in 25–40, a worker process dies during ChromeDriver startup with Windows exit code `0xC0000409`, before any test runs. There's no Allure result or screenshot, and whichever spec it held is reported failed. Not spec-specific. Seen only on the Windows dev machine, never in CI. Untested experiments: a per-worker ChromeDriver cache directory, then `maxInstances: 2`. **Don't debug it inside a spec.** |
+| CI artifact on a red run (audit #2, deferred) | Neither workflow's upload step has `if: always()`, so the Allure report exists only for green runs. On a red run, read the job log. |
+| `--env dev` (audit #5, deferred) | Points at `saucedemo.com/v1/`, which is not a working target. Use `qa`. |
+| `browser.*` outside its sanctioned places | Beyond the factory, Test Support and `Page.open()`: specs make 4 `expect(browser).toHaveUrl` calls, `login.page.ts` reads `browser.options.baseUrl`, and `cart.page.ts` calls `browser.waitUntil` after `clickAllIfExists`, which already performs that same wait. URL assertions need either a factory helper or an explicit exception; that decision is still to be made. Don't add new ones in the meantime. |
+| Read-once getters with no callers | Eight public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reintroduces the audit #6 race. |
+| Firefox | Configured and offered by `ci-on-demand.yml`, but no recorded CI run has used it. Treat it as unverified. |
+| Environment-specific test data | Only `placeHolderData.json` exists, so per-environment values have nowhere to go. |
+| Side-menu coverage | Only Logout is exercised. All Items, About and Reset App State have no tests. |
+| Unit tests | None. The pure utilities and `getSelectorByValue`'s validation are covered only indirectly, by e2e runs. |
