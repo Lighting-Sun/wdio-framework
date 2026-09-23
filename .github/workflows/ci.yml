@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           # .nvmrc is the single source of truth for the Node version, so local
           # and CI cannot drift apart again (audit #23).
@@ -37,7 +37,7 @@ jobs:
           # `error` is right locally and useless in CI, where the log is all
           # you get (audit #22).
           WDIO_LOG_LEVEL: info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: allure-report
           path: ./reports/allure/allure-report

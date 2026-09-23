@@ -75,7 +75,7 @@ gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrom
 gh run watch <run-id> --exit-status
 ```
 
-`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx** and Chrome runs headless. Rounds 1–11 ran locally on Windows with Node 24; round 12 ran on macOS with Node 26.8.1. Either way, local Node is newer than CI's 20.19.0.
+`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (24.21.0 since round 13; it was 20.19.0 before); both workflows read it via `node-version-file`. Runner is **tsx** and Chrome runs headless. Rounds 1–11 ran locally on Windows with Node 24; rounds 12–13 ran on macOS, where the system Node is 26.8.1. **Use Node 24 locally**; see *Round 13* for what breaks on 26.
 
 ### CI status
 
@@ -97,8 +97,8 @@ The first run confirmed each round-8 change individually rather than resting on 
 **Three things to carry forward:**
 
 - **`ci.yml` is proven, with one gap.** On both of its runs every step succeeded, and the `allure-report` artifact uploaded (1,026,497 and 1,026,439 bytes), which was checked through the REST API. `git diff 4205dc2 9f18c20` is empty, so the merge changed nothing the PR run had tested. **The gap: nobody has read the test count out of a `ci.yml` log.** Job logs need an authenticated session, and the round-12 machine had no `gh`. The Test step passing means every spec passed. The count itself is still unchecked.
-- **A Node version bump cannot be verified on this machine.** Local is Node 24, where every engine range already passes, so `EBADENGINE` warnings do not reproduce here at all. A clean local install looks like evidence and is worth nothing; the count has to be read out of a CI install log. This is how #31 was verified.
-- **Two annotations appear on every run.** `actions/checkout@v4`, `setup-node@v4` and `upload-artifact@v4` target Node 20 and are being force-run on Node 24 — bump them to `@v5` when convenient. Separately, `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
+- **A Node version bump is only verifiable on the version CI runs.** A local install on a *newer* Node proves nothing, because newer versions pass every engine range. That is why #31 had to be verified from a CI install log. Round 13 got around it by downloading the exact pinned Node (24.21.0) and running `npm ci` under it: 0 `EBADENGINE`. A CI dispatch should still confirm it.
+- **The actions were bumped to `@v7` in round 13.** `@v4` targeted Node 20 and was being force-run on Node 24, which produced an annotation on every run. None of v5–v7 has a breaking change for these workflows (read from the release notes; upload-artifact v7 only adds an opt-in `archive: false`). **Not yet run in CI.** `ubuntu-latest` still moves to Ubuntu 26 on 2026-10-19.
 
 ---
 
@@ -195,9 +195,25 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 **`fix/audit-critical-findings` still exists on `origin`.** It's merged, but keep it: it holds the per-round commit history that the squash flattened (see *Where this stands*).
 
+## Round 13 — Node 24 and dependency updates (branch `chore/update-dependencies`)
+
+**What changed:** WDIO 9.27.0 → 9.32.0 (all five packages), allure-commandline → 2.46.1, prettier → 3.9.9, yargs → 18.2.0, `@types/node` ^24 added. `.nvmrc` 20.19.0 → **24.21.0**, `engines.node` → `>=24.0.0`, the lowest version all 273 dependencies with an engines field accept. Both workflows' actions `@v4` → `@v7`. Verified locally on the exact pinned Node: clean install with 0 `EBADENGINE`; typecheck, lint and format clean; suite 4/4 spec files, 11 tests, 6 consecutive green runs; smoke grep ran exactly the 3 `@smoke` tests.
+
+**Held back: TypeScript 7.** Every `typescript-eslint` release, canary included, declares `typescript: <6.1.0`. **When a release supports 7:** check with `npm view typescript-eslint peerDependencies.typescript`. Then run `npm install -D typescript@^7 typescript-eslint@<that version>`, then `npm run typecheck` and `npm run lint`, and expect new type errors (TS 7 is a rewrite; treat each error as a real finding, not noise). Re-run the suite and dispatch CI before a PR. Also check `eslint-plugin-wdio`'s `typescript-eslint` peer range at the same time.
+
+**Found on Node 26 (the Mac's system Node), none of it an issue on 24:**
+
+- **WDIO 9.27.0 cannot create a session on Node 26.** Every `POST /session` fails with `UND_ERR_INVALID_ARG`, 4/4 spec files, in 1 s. WDIO 9.32.0 does not have the problem.
+- **ChromeDriver's automatic download never unpacks its binary on Node 26.** The zip arrives complete, but `@puppeteer/browsers`' extractor writes only the two licence files, and WDIO then refuses the half-populated cache folder (`All providers failed … executable is missing`) and never retries. A manual `unzip` of the same zip works. On Node 24, four workers extracting into one fresh cache at once produced a complete binary. So it is a Node 26 problem, **not** the concurrency the #29 hypothesis is about. That is a result on macOS/Node 26 only; it says nothing either way about the Windows crash.
+- **Exit code 0 is not a pass.** Twice the run was interrupted by a SIGINT during that download and `npm test` still exited 0. Read the `Spec Files:` line, never the exit code alone.
+- **#29 lead:** the failing Node 26 run printed `retried 2x` against a budget of 1, the same anomaly every #29 capture shows. Here the cause was a session-creation failure, not a worker crash. So the anomaly goes with *failure before the session exists*, which fits both.
+
+**The Mac still has Node 26 as its system Node.** Round 13 used a Node 24 unpacked in the session scratchpad. Install Node 24 properly before the next session (for example `brew install nvm`, then `nvm install` in the repo, which reads `.nvmrc`).
+
 ## Suggested next step
 
 1. **#29, on the Windows machine.** Start with the per-worker ChromeDriver cache directory, then try `maxInstances: 2`. Don't run the loop on macOS or Linux and call a clean result evidence.
-2. **Bump the three actions from `@v4` to `@v5`**, then check with a `ci-on-demand.yml` dispatch. Do this before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19.
+2. **Run `ci-on-demand.yml` against `chore/update-dependencies`** before opening its PR. It's the first CI run of Node 24.21.0, WDIO 9.32.0 and the `@v7` actions. Check the log for `node: v24.21.0`, 0 `EBADENGINE`, 11 passing tests and a non-empty artifact.
 3. **Ask the owner about the code drift the architecture refresh documented** (see above): the URL-assertion helper, the redundant `waitUntil` in `cart.page.ts`, the 8 unused getters. Don't fix any of it unasked.
 4. Optionally, read the test count from the Test step log of [run 35891879515](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35891879515) to close the one gap in `ci.yml`'s verification.
+5. **TypeScript 7, when `typescript-eslint` supports it.** See *Round 13* above for the procedure.

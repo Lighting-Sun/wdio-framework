@@ -78,7 +78,7 @@ You can run this repository without downloading it
 
 #### Node JS
 
-1. You must have [Node.js](https://nodejs.org/en) **20.19.0 or newer** installed. The exact version CI uses is pinned in `.nvmrc`; with nvm, run `nvm use` in the project folder
+1. You must have [Node.js](https://nodejs.org/en) **24** (the LTS line) installed. The exact version CI uses is pinned in `.nvmrc` (24.21.0); with nvm, run `nvm install` then `nvm use` in the project folder. Avoid Node 26 for now: on it, the automatic ChromeDriver download doesn't fully unpack and every test fails at startup
 2. When you are installing Node.js, make sure to check this option
 - [x] Automatically install the necesary tools. Note that this will also install Chocolatey. The script will pop-up in a new window after the installation completes.
 
