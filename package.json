@@ -4,8 +4,8 @@
     "description": "wdio automation test framework",
     "type": "module",
     "scripts": {
-        "test": "npx wdio",
-        "wdio": "wdio run ./wdio.conf.ts",
+        "test": "wdio run ./wdio.conf.ts",
+        "typecheck": "tsc --noEmit",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
@@ -30,5 +30,8 @@
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.70.1",
         "yargs": "^18.0.0"
+    },
+    "engines": {
+        "node": ">=20.17.0"
     }
 }

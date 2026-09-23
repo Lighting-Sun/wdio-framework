@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 import loginPage from '../pages/login.page.js';
 import inventoryPage from '../pages/inventory.page.js';
 import cartPage from '../pages/cart.page.js';
-import data from '../data/placeHolderData.json' with { type: 'json' };
+import { validUser } from './credentials.support.js';
 
 /**
  * Reusable preconditions, as opposed to page objects: a page object models a
@@ -15,7 +15,7 @@ import data from '../data/placeHolderData.json' with { type: 'json' };
 
 /** Logs in as the standard user and confirms the inventory page is showing. */
 export async function loginAsStandardUser(): Promise<void> {
-    await loginPage.loginWithCredentials(data.users.validUser.username, data.users.validUser.password);
+    await loginPage.loginWithCredentials(validUser.username, validUser.password);
     await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
     await inventoryPage.header.expectPageTitle('Products');
 }

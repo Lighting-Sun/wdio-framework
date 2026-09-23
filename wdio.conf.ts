@@ -35,6 +35,16 @@ const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
 /** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
 const SPEC_FILE_RETRIES = 1;
 
+/**
+ * `error` is right locally, where a failing run is in front of you, and wrong
+ * in CI, where the log is all you get. Driven by an env var so CI can raise it
+ * without a code change (audit #22).
+ */
+type WdioLogLevel = NonNullable<WebdriverIO.Config['logLevel']>;
+const LOG_LEVELS: readonly WdioLogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'silent'];
+const envLogLevel = process.env.WDIO_LOG_LEVEL as WdioLogLevel | undefined;
+const logLevel: WdioLogLevel = envLogLevel && LOG_LEVELS.includes(envLogLevel) ? envLogLevel : 'error';
+
 export const config: WebdriverIO.Config = {
     runner: 'local',
     specs: ['./tests/specs/**/*.ts'],
@@ -51,7 +61,7 @@ export const config: WebdriverIO.Config = {
     maxInstances: 10,
     baseUrl,
     capabilities: [selectedBrowserCap],
-    logLevel: 'error',
+    logLevel,
     bail: 0,
     waitforTimeout: 10000,
     connectionRetryTimeout: 120000,
