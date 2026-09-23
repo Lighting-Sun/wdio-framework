@@ -1,21 +1,20 @@
-import BaseComponent from "./base.component.js";
-import type { Locator } from "../utils/wdioFactory.utils.js";
+import BaseComponent from './base.component.js';
+import type { Locator } from '../utils/wdioFactory.utils.js';
 
 class SideMenu extends BaseComponent {
-
     locators = {
         sideMenuOption: {
-            selector: "//a[@class='bm-item menu-item'][text()='${value}']",
-            description: "side menu option '${value}'"
-        }
+            selector: "a[data-test='${value}-sidebar-link']",
+            description: "side menu option '${value}'",
+        },
     };
 
-    async getSideMenuOptionByValue(strValue: string): Promise<Locator> {
-        return await this.wdioFactoryUtils.getSelectorByValue(this.locators.sideMenuOption, strValue);
+    getSideMenuOptionByValue(value: string): Locator {
+        return this.wdioFactoryUtils.getSelectorByValue(this.locators.sideMenuOption, value);
     }
 
-    async clickOnSideMenuOptionByValue(strValue: string): Promise<void> {
-        await this.wdioFactoryUtils.click(await this.getSideMenuOptionByValue(strValue));
+    async clickOnSideMenuOptionByValue(value: string): Promise<void> {
+        await this.wdioFactoryUtils.click(this.getSideMenuOptionByValue(value));
     }
 }
 

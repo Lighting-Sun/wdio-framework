@@ -8,115 +8,105 @@ class Inventory extends Page {
     header = new Header();
 
     locators = {
-        inventoryItemLabelFromName: {
-            selector: "//div[text()='${value}']",
-            description: "item label name '${value}'",
+        inventoryItemName: {
+            selector: "div[data-test='inventory-item-name']",
+            description: 'inventory item name',
         },
         inventoryItemPrice: {
-            selector: "div[class='inventory_item_price']",
-            description: "inventory item price",
-        },
-        addToCartButtonBasedOnItemName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@class='inventory_item_description']//button[text()='Add to cart']",
-            description: "add to cart button based on item name '${value}'",
-        },
-        inventoryItemPriceIndex: {
-            selector: "div[data-test='inventory-item']:nth-of-type(${value}) div[class='inventory_item_price']",
-            description: "inventory item price based on index ${value}'",
-        },
-        inventoryItemNameIndex: {
-            selector: "div[data-test='inventory-item']:nth-of-type(${value}) div[class='inventory_item_name ']",
-            description: "inventory item name based on index ${value}'",
-        },
-        inventoryAddCartItemButtonIndex: {
-            selector: "div[data-test='inventory-item']:nth-of-type(${value}) button[class*='btn_small']",
-            description: "inventory item button based on index ${value}'",
-        },
-        inventoryItemCard: {
-            selector: "div[data-test='inventory-item']",
-            description: "inventory item name based on index'",
+            selector: "div[data-test='inventory-item-price']",
+            description: 'inventory item price',
         },
         inventoryItemNameByName: {
-            selector: "//div[text()='${value}']",
-            description: "inventory item name based on ${value}'",
+            selector:
+                "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-name']",
+            description: "inventory item name for '${value}'",
         },
         inventoryItemPriceByName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//div[@data-test='inventory-item-price']",
-            description: "inventory item price based on ${value}'",
+            selector:
+                "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-price']",
+            description: "inventory item price for '${value}'",
         },
         inventoryAddToCartButtonByName: {
-            selector: "//div[text()='${value}']/ancestor-or-self::div[@data-test='inventory-item-description']//button",
-            description: "inventory item price based on ${value}'",
-        }
+            selector: "button[data-test='add-to-cart-${value}']",
+            description: "add to cart button for '${value}'",
+        },
     };
 
-    async clickAddToCartByItemName(strItemName: string): Promise<void> {
-        const element = await this.wdioFactory.getSelectorByValue(this.locators.addToCartButtonBasedOnItemName, strItemName);
-        await this.wdioFactory.click(element);
+    async getTextFromNames(): Promise<string[]> {
+        return await this.wdioFactory.getTextFromElements(this.locators.inventoryItemName);
+    }
+
+    /**
+     * Retrying comparison for the product name list, for the same reason as
+     * the price version below: selecting a sort option re-renders the grid.
+     */
+    async expectTextFromNames(expectedNames: string[]): Promise<void> {
+        await this.wdioFactory.expectEventuallyEquals(
+            'inventory item names',
+            () => this.getTextFromNames(),
+            expectedNames,
+        );
     }
 
     async getTextFromPrices(): Promise<string[]> {
         const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
-        return textFromPrices.map(textToTrim => textToTrim.slice(1));
+        return textFromPrices.map((textToTrim) => textToTrim.slice(1));
     }
 
-    async getInventoryPriceFromIndexText(index: number): Promise<string> {
-        return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceIndex, index));
+    /**
+     * Retrying comparison for the price list. The sort control triggers a
+     * re-render, so a single read can still see the previous order.
+     */
+    async expectTextFromPrices(expectedPrices: string[]): Promise<void> {
+        await this.wdioFactory.expectEventuallyEquals(
+            'inventory item prices',
+            () => this.getTextFromPrices(),
+            expectedPrices,
+        );
     }
 
-    async getInventoryNameFromIndexText(index: number): Promise<string> {
-        return await this.wdioFactory.getText(await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameIndex, index));
-    }
-
-    async clickAddCartItemButtonFromIndex(index: number): Promise<void> {
-        await this.wdioFactory.click(await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddCartItemButtonIndex, index));
-    }
-
-    async AddItemToCartByIndex(index: number): Promise<ItemDetail> {
-        const itemNameText = await this.getInventoryNameFromIndexText(index);
-        const itemPriceText = await this.getInventoryPriceFromIndexText(index);
-        await this.clickAddCartItemButtonFromIndex(index);
-        return {
-            itemName: itemNameText,
-            itemPrice: itemPriceText,
-        };
-    }
-
-    async getNumberOfItems(): Promise<number> {
-        return (await this.wdioFactory.getElements(this.locators.inventoryItemCard)).length;
-    }
-
-    async addRandomItemsToCart(): Promise<ItemDetail[]> {
-        const detailsPromises: ItemDetail[] = [];
-        const numberOfItems = await this.getNumberOfItems();
-        const indexesToAdd = UtilsMethods.getSetFromRange(1, numberOfItems, UtilsMethods.getRandomNumber(1, numberOfItems));
-
-        for await (const index of indexesToAdd) {
-            detailsPromises.push(await this.AddItemToCartByIndex(index));
+    /**
+     * Adds a fixed, caller-supplied list of products. Replaces the previous
+     * random selection: a failure here names the exact products involved and
+     * re-runs identically.
+     */
+    async addItemsToCartByNames(itemNames: string[]): Promise<ItemDetail[]> {
+        const itemDetails: ItemDetail[] = [];
+        for (const itemName of itemNames) {
+            itemDetails.push(await this.addItemToCartByName(itemName));
         }
-        return detailsPromises;
+        return itemDetails;
     }
 
-    async getProperyValuesFromArrayOfDetails(arrOfItemDetail: ItemDetail[], strPropertyToGet: keyof ItemDetail): Promise<string[]> {
-        return arrOfItemDetail.map(detail => detail[strPropertyToGet]);
+    getPropertyValuesFromArrayOfDetails(itemDetails: ItemDetail[], propertyToGet: keyof ItemDetail): string[] {
+        return itemDetails.map((detail) => detail[propertyToGet]);
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemNameByName, value);
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryItemNameByName,
+            UtilsMethods.toProductSlug(value),
+        );
         return await this.wdioFactory.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryItemPriceByName, value);
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryItemPriceByName,
+            UtilsMethods.toProductSlug(value),
+        );
         return await this.wdioFactory.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value: string): Promise<void> {
-        const selector = await this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, value);
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryAddToCartButtonByName,
+            UtilsMethods.toProductSlug(value),
+        );
         await this.wdioFactory.click(selector);
     }
 
-    async AddItemToCartByName(value: string): Promise<ItemDetail> {
+    async addItemToCartByName(value: string): Promise<ItemDetail> {
         const itemNameText = await this.getInventoryItemNameByNameText(value);
         const itemPriceText = await this.getInventoryItemPriceByNameText(value);
         await this.clickInventoryItemAddToCartByName(value);

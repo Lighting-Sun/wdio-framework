@@ -18,12 +18,25 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.17.0"
+          # .nvmrc is the single source of truth for the Node version, so local
+          # and CI cannot drift apart again (audit #23).
+          node-version-file: ".nvmrc"
           cache: "npm"
       - name: Install
         run: npm ci --no-fund --no-audit
+      # Static checks run before the suite: they are seconds long, they fail
+      # for reasons a browser run cannot tell you, and until now neither ran
+      # in CI at all, so a type error or a floating promise shipped (audit #24).
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
       - name: Test
-        run: npx wdio --env qa
+        run: npm test -- --env qa
+        env:
+          # `error` is right locally and useless in CI, where the log is all
+          # you get (audit #22).
+          WDIO_LOG_LEVEL: info
       - uses: actions/upload-artifact@v4
         with:
           name: allure-report

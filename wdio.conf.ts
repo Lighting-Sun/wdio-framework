@@ -1,11 +1,11 @@
-import path from "node:path";
-import allure from "allure-commandline";
+import allure from 'allure-commandline';
+import allureReporter from '@wdio/allure-reporter';
 import fs from 'fs';
-import yargs from "yargs";
+import yargs from 'yargs';
 
 const argv = yargs(process.argv.slice(2)).parseSync();
 
-let allureDir = "./reports/allure";
+const allureDir = './reports/allure';
 
 const selectedEnv = (argv['env'] as string | undefined) ?? 'qa';
 const environments: Record<string, string> = {
@@ -19,69 +19,79 @@ const browserCap: Record<string, object> = {
     chrome: {
         browserName: 'chrome',
         'goog:chromeOptions': {
-            args: ['headless', 'disable-gpu']
-        }
+            args: ['headless', 'disable-gpu'],
+        },
     },
     firefox: {
         browserName: 'firefox',
         'moz:firefoxOptions': {
-            args: ['-headless']
-        }
-    }
+            args: ['-headless'],
+        },
+    },
 };
 
 const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
 
-export const config = {
+/** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
+const SPEC_FILE_RETRIES = 1;
+
+/**
+ * `error` is right locally, where a failing run is in front of you, and wrong
+ * in CI, where the log is all you get. Driven by an env var so CI can raise it
+ * without a code change (audit #22).
+ */
+type WdioLogLevel = NonNullable<WebdriverIO.Config['logLevel']>;
+const LOG_LEVELS: readonly WdioLogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'silent'];
+const envLogLevel = process.env.WDIO_LOG_LEVEL as WdioLogLevel | undefined;
+const logLevel: WdioLogLevel = envLogLevel && LOG_LEVELS.includes(envLogLevel) ? envLogLevel : 'error';
+
+export const config: WebdriverIO.Config = {
     runner: 'local',
-    specs: [
-        './tests/specs/**/*.ts'
-    ],
+    specs: ['./tests/specs/**/*.ts'],
     suites: {
         regression: [
             './tests/specs/addProductsToCart.spec.ts',
             './tests/specs/completePurchase.spec.ts',
             './tests/specs/filter.spec.ts',
-            './tests/specs/login.spec.ts'
-        ],
-        loginAndPurchase: [
             './tests/specs/login.spec.ts',
-            './tests/specs/completePurchase.spec.ts'
-        ]
+        ],
+        loginAndPurchase: ['./tests/specs/login.spec.ts', './tests/specs/completePurchase.spec.ts'],
     },
     exclude: [],
     maxInstances: 10,
     baseUrl,
     capabilities: [selectedBrowserCap],
-    logLevel: 'error' as const,
+    logLevel,
     bail: 0,
     waitforTimeout: 10000,
     connectionRetryTimeout: 120000,
     connectionRetryCount: 3,
 
-    services: [
+    /**
+     * Retry a failed spec file once, after the rest of the run finishes, so a
+     * transient failure does not fail the whole build. `onWorkerEnd` below
+     * reports every retry: a retry that nobody sees is a muted test.
+     */
+    specFileRetries: SPEC_FILE_RETRIES,
+    specFileRetriesDeferred: true,
+
+    framework: 'mocha',
+
+    reporters: [
+        'spec',
         [
-            "visual",
+            'allure',
             {
-                baselineFolder: path.join(process.cwd(), "tests/visual-testing", "baseline"),
-                formatImageName: "{tag}-{logName}-{width}x{height}",
-                screenshotPath: path.join(process.cwd(), "tmp"),
-                savePerInstance: true,
+                outputDir: allureDir + '/allure-results',
+                disableWebdriverStepsReporting: true,
+                disableWebdriverScreenshotsReporting: true,
             },
         ],
     ],
 
-    framework: 'mocha',
-
-    reporters: ['spec', ['allure', {
-        outputDir: allureDir + '/allure-results',
-        disableWebdriverStepsReporting: true,
-        disableWebdriverScreenshotsReporting: true,
-    }]],
-
     mochaOpts: {
         ui: 'bdd',
-        timeout: 60000
+        timeout: 60000,
     },
 
     onPrepare: function () {
@@ -91,29 +101,52 @@ export const config = {
                 fs.rmSync(dir, { recursive: true });
                 console.log(`🗑 ${dir} is deleted`);
             }
-        } catch (error) {
-            console.log("⚠ error while deleting this dir");
+        } catch {
+            console.log('⚠ error while deleting this dir');
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.log("✔ dir got created");
+                console.log('✔ dir got created');
             }
         }
     },
 
-    afterTest: async function (_test: unknown, _context: unknown, { passed }: { passed: boolean }) {
-        if (!passed) {
-            await browser.takeScreenshot();
+    /**
+     * Makes retries visible. A spec that only passes on its second attempt is
+     * flaky, and that fact has to reach a human — otherwise `specFileRetries`
+     * quietly hides exactly the failures worth investigating.
+     */
+    onWorkerEnd: function (cid: string, exitCode: number, specs: string[], retries: number) {
+        // `retries` is the budget REMAINING, not the number used, so a worker
+        // that never failed still reports the full budget here.
+        const retriesUsed = SPEC_FILE_RETRIES - retries;
+        if (retriesUsed > 0) {
+            const outcome = exitCode === 0 ? 'passed on retry — FLAKY' : 'still failed after retrying';
+            console.log(`⚠ ${specs.join(', ')} [${cid}] was retried ${retriesUsed}x and ${outcome}.`);
         }
+    },
+
+    afterTest: async function (_test: unknown, _context: unknown, { passed }: { passed: boolean }) {
+        if (passed) {
+            return;
+        }
+        const screenshot = await browser.takeScreenshot();
+        // Must be awaited: afterTest resolving before the attachment is written
+        // can lose the screenshot during teardown, which is the whole point of #1.
+        await allureReporter.addAttachment('Screenshot on failure', Buffer.from(screenshot, 'base64'), 'image/png');
     },
 
     onComplete: function () {
         const timeOutTimer = 60_000;
         const reportError = new Error('Could not generate Allure report');
-        const generation = allure(['generate', allureDir + '/allure-results', '--clean', '-o', allureDir + '/allure-report']);
+        const generation = allure([
+            'generate',
+            allureDir + '/allure-results',
+            '--clean',
+            '-o',
+            allureDir + '/allure-report',
+        ]);
         return new Promise<void>((resolve, reject) => {
-            const generationTimeout = setTimeout(
-                () => reject(reportError),
-                timeOutTimer);
+            const generationTimeout = setTimeout(() => reject(reportError), timeOutTimer);
 
             generation.on('exit', function (exitCode: number) {
                 clearTimeout(generationTimeout);

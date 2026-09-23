@@ -44,19 +44,36 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.17.0"
+          node-version-file: ".nvmrc"
           cache: "npm"
       - name: Install
         run: npm ci --no-fund --no-audit
-      - if: ${{ github.event.inputs.suite == 'smoke' }}
-        name: Test
-        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --mochaOpts.grep ${{ github.event.inputs.suite }}
-      - if: ${{ github.event.inputs.suite && github.event.inputs.suite != 'smoke'}}
-        name: Test
-        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }} --suite ${{ github.event.inputs.suite || 'regression' }}
-      - if: ${{! github.event.inputs.suite }}
-        name: Test
-        run: npx wdio --env ${{ github.event.inputs.environment }} --browser ${{ github.event.inputs.browser }}
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      # One step that builds its arguments, replacing three near-identical
+      # conditional steps (audit #27). Inputs arrive as environment variables
+      # and are quoted at the point of use, so a future switch from `choice` to
+      # free text cannot turn an input into shell (audit #26).
+      - name: Test
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          BROWSER: ${{ inputs.browser }}
+          SUITE: ${{ inputs.suite }}
+          WDIO_LOG_LEVEL: info
+        run: |
+          args=(--env "$ENVIRONMENT" --browser "$BROWSER")
+          if [ "$SUITE" = "smoke" ]; then
+            # @smoke tags individual tests across several files, so this stays a
+            # grep. Making `smoke` an entry in the `suites` map would select whole
+            # files instead and quietly run more than was asked for.
+            args+=(--mochaOpts.grep smoke)
+          elif [ -n "$SUITE" ]; then
+            args+=(--suite "$SUITE")
+          fi
+          echo "Running: npm test -- ${args[*]}"
+          npm test -- "${args[@]}"
       - if: github.event.inputs.artifacts == 'true'
         uses: actions/upload-artifact@v4
         with:

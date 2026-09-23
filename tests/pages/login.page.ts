@@ -1,27 +1,26 @@
 import Page from './page.js';
 
 class LoginPage extends Page {
-
     locators = {
         loginButton: {
-            selector: "#login-button",
-            description: "login button for the saucedemo application",
+            selector: '#login-button',
+            description: 'login button for the saucedemo application',
         },
         usernameInput: {
             selector: "input[data-test='username']",
-            description: "username input field",
+            description: 'username input field',
         },
         passwordInput: {
             selector: "input[data-test='password']",
-            description: "password input field",
+            description: 'password input field',
         },
         loginErrorMessage: {
             selector: "h3[data-test='error']",
-            description: "login error message",
+            description: 'login error message',
         },
         loginLogo: {
-            selector: "div.login_logo",
-            description: "Swag Labs logo in login page",
+            selector: 'div.login_logo',
+            description: 'Swag Labs logo in login page',
         },
     };
 
@@ -37,7 +36,7 @@ class LoginPage extends Page {
         await this.wdioFactory.setValue(this.locators.passwordInput, password);
     }
 
-    async clicklOnLoginBtn(): Promise<void> {
+    async clickOnLoginBtn(): Promise<void> {
         await this.wdioFactory.click(this.locators.loginButton);
     }
 
@@ -49,10 +48,18 @@ class LoginPage extends Page {
         return await this.wdioFactory.getText(this.locators.loginLogo);
     }
 
-    async loginWithCredentials(srtUserName: string, strPassword: string): Promise<void> {
-        await this.fillUsername(srtUserName);
-        await this.fillPassword(strPassword);
-        await this.clicklOnLoginBtn();
+    async expectLoginErrorMessage(expectedMessage: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginErrorMessage, expectedMessage);
+    }
+
+    async expectLoginLogoText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.loginLogo, expectedText);
+    }
+
+    async loginWithCredentials(username: string, password: string): Promise<void> {
+        await this.fillUsername(username);
+        await this.fillPassword(password);
+        await this.clickOnLoginBtn();
     }
 }
 

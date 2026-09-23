@@ -5,13 +5,9 @@
         "moduleResolution": "NodeNext",
         "strict": true,
         "esModuleInterop": true,
+        "resolveJsonModule": true,
         "skipLibCheck": true,
-        "types": [
-            "node",
-            "@wdio/globals/types",
-            "@wdio/mocha-framework",
-            "@wdio/visual-service"
-        ]
+        "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"]
     },
     "include": ["tests/**/*.ts", "wdio.conf.ts", "*.d.ts"],
     "exclude": ["node_modules"]
