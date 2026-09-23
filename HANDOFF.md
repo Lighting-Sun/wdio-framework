@@ -1,19 +1,23 @@
 # Handoff — WebdriverIO framework audit remediation
 
-**Written:** 2026-09-22
-**Branch:** `fix/audit-critical-findings` (ahead of `main`; run `git log --oneline main..HEAD` for the current list — **nothing pushed, nothing merged**)
+**Written:** 2026-09-23 (replaces the 2026-09-22 handoff)
+**Branch:** `fix/audit-critical-findings` — ahead of `main`, **nothing pushed, nothing merged**
 **Working tree:** clean
-**Read first:** [audit.md](audit.md) — it is the plan, the spec, and the status tracker all at once.
+**Read first:** [audit.md](audit.md). It is the plan, the spec and the status tracker in one document.
 
 ---
 
-## What this is
+## Where this stands
 
-A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). It was audited, producing 27 findings; two more (#28, #29) were discovered while fixing them. Fixes are being applied in priority order, in rounds.
+A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). An audit produced 27 findings; two more (#28, #29) surfaced while fixing them, so the audit runs to 29.
 
-**Of 29 findings: 26 fixed, 2 deferred by the owner's explicit decision, 1 open.** The only open finding is **#29**, which is diagnosed and narrowed but not fixed. Everything else is done.
+**26 fixed · 2 deferred by the owner's decision · 1 open.**
 
-`audit.md` carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. **Keep it current** — it is how the next session knows where things stand. Every fix round has been two commits: one `fix:`/`refactor:` for the code, one `docs:` updating the audit.
+The one open finding is **#29**. It is diagnosed, narrowed, and has one untested experiment left. Everything else in the audit is closed.
+
+Nine rounds of work are on the branch. Each round is two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
+
+**Keep `audit.md` current.** It carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. That is how the next session knows what happened.
 
 ---
 
@@ -23,11 +27,13 @@ The owner made these calls explicitly. Do not reopen them without being asked.
 
 | Decision | Detail |
 |---|---|
-| **#2 and #5 are deferred** | CI artifact-on-failure and the broken `dev` environment. Severity stays **Critical** — deferring work and downgrading risk are different decisions, and the audit records it that way. Do not "helpfully" fix them. |
-| **Assertion style** | Retry helpers live in the factory (`expectText`, `expectTextsFromElements`, `expectEventuallyEquals`). Specs do **not** get raw elements. This preserves the "no `$()` outside the factory" rule and keeps Allure logging centralized. |
+| **#2 and #5 stay deferred** | CI artifact-on-failure, and the broken `dev` environment. Severity stays **Critical** — deferring work and downgrading risk are different decisions, and the audit records it that way. Do not "helpfully" fix them while editing those files. |
+| **Visual testing is out of scope** | `@wdio/visual-service` was dropped in round 6 (#20). Nothing was lost: it had no assertions, no baseline directory, and `.gitignore` made baselines uncommittable. Do not reintroduce it. |
+| **Assertion style** | Retry helpers live in the factory (`expectText`, `expectTextsFromElements`, `expectEventuallyEquals`), surfaced through page methods. Specs never receive raw elements. This preserves "no `$()` outside the factory" and keeps Allure logging in one place. |
 | **Test data** | Fixed product lists in `placeHolderData.json`. No randomness, no seeding. |
-| **Naming** | Hungarian prefixes were **dropped** (102 identifiers). The TypeScript signature carries the type. |
-| **Fixtures** | `tests/support/flows.support.ts` holds reusable *preconditions*. A test whose subject **is** logging in must still drive the login page directly — a fixture must never hide the thing under test. The two `login.spec` login tests are intentionally not converted. |
+| **Naming** | Hungarian prefixes were dropped (102 identifiers). The TypeScript signature carries the type. |
+| **Fixtures** | `tests/support/flows.support.ts` holds reusable *preconditions*. A test whose subject **is** logging in must drive the login page directly — a fixture must never hide the thing under test. The two `login.spec` login tests are intentionally not converted. |
+| **Prettier scope** | `*.md` and `.github` are in `.prettierignore` on purpose. `audit.md` and this file carry hand-aligned tables, and reformatting them churns every future diff. |
 
 ---
 
@@ -35,106 +41,110 @@ The owner made these calls explicitly. Do not reopen them without being asked.
 
 This matters more than any individual fix. The owner has consistently valued evidence over assertion.
 
-1. **Verify against the old behavior, not just the new.** Don't claim "`reduce` no longer throws" — run the old form, show the `TypeError`, then show `0`. Don't claim screenshots attach — force a failure and count the PNGs.
-2. **Never commit on a red or unverified suite.** When a flake appeared mid-round, the work stopped and got investigated before committing.
-3. **Report honestly when a fix is wrong.** The `onWorkerEnd` hook was implemented incorrectly first (see Gotchas) and the verification run caught it. That was surfaced plainly, not quietly patched.
-4. **Say what was left untouched.** Each round explicitly listed adjacent findings that were *not* fixed, so the diff stays reviewable.
-5. **Commit messages carry the why and the verification evidence**, so the reasoning survives outside the chat. Follow the existing format — read `git log` before writing one.
-6. Attribution line on every commit: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
+1. **Verify against the old behavior, not just the new.** Don't claim the loop is bounded — run the old form, show the 60s timeout, then show the 2s failure. Don't claim an env var is wired — set it to a bogus value and show the tests break.
+2. **A test that passes immediately proves nothing.** The four sort tests were mutation-checked by pairing each option with the wrong sort function; all four failed, which is what made the green run meaningful.
+3. **Never commit on a red or unverified suite.**
+4. **Report honestly when a fix is wrong.** The `onWorkerEnd` hook was implemented backwards first and the verification run caught it. Finding #1's fix turned out to be incomplete for six rounds. Both were surfaced plainly and recorded in the audit, not quietly patched.
+5. **Say what was left untouched.** Each round lists the adjacent findings it did *not* fix, so the diff stays reviewable.
+6. **Commit messages carry the why and the verification evidence.** Read `git log` before writing one.
+7. Attribution on every commit: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
 
 ---
 
 ## Commands
 
 ```bash
-npm run typecheck                      # tsc --noEmit — must be clean before any commit
-npm run lint                           # ESLint — also must be clean before any commit
-npm run format                         # Prettier (code only; *.md and .github are ignored)
-npm test                               # full suite: 4 spec files, 11 tests, ~6s
+npm run typecheck                        # tsc --noEmit — must be clean before any commit
+npm run lint                             # ESLint — also must be clean before any commit
+npm run format                           # Prettier (code only; *.md and .github ignored)
+npm run format:check
+npm test                                 # full suite: 4 spec files, 11 tests, ~6s
 npm test -- --spec tests/specs/filter.spec.ts
 npm test -- --suite loginAndPurchase
-WDIO_LOG_LEVEL=info npm test           # raise log level without touching the config
-npm run open-allure                    # view the last report
+WDIO_LOG_LEVEL=info npm test             # raise log level without touching the config
+npm run open-allure                      # view the last report
 ```
 
-`typecheck` and `lint` both run in CI now, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.17.0) and both workflows read it with `node-version-file`.
+`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.17.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
 
-Runner is **tsx** (not ts-node). Node 24 locally, CI pins 20.17.0. Chrome runs headless.
+**The CI changes have never actually run.** Nothing is pushed, so `node-version-file`, the typecheck/lint steps and the collapsed on-demand Test step will meet real GitHub Actions for the first time on whatever push happens next. The YAML parses and the shell logic was verified locally, but watch that first run.
 
 ---
 
-## What remains
+## The only open finding: #29
 
-### #29 — a worker process crashes during startup (High, **recommended next**)
+### A worker process crashes during startup
 
-**Round 5 found the root cause. It is not a test bug and not an assertion failure — the worker process dies.**
-
-A 40-run loop at `--logLevel debug` reproduced it once (run 19 of 40). The launcher log:
+**Not a test bug. Not an assertion failure. The Node worker process dies.**
 
 ```
 DEBUG @wdio/local-runner: Runner 0-2 finished with exit code 3221226505
 ```
 
-`3221226505` = `0xC0000409` = Windows `STATUS_STACK_BUFFER_OVERRUN`, a fail-fast hard crash of the Node worker process.
+`3221226505` = `0xC0000409` = Windows `STATUS_STACK_BUFFER_OVERRUN`, a fail-fast hard crash.
 
-The crashed worker's log stops after `Using Chromedriver … from cache directory` and never reaches `Started Chromedriver … on port` or `POST /session`, while healthy workers in the same run reach both. The crashed worker also left no `wdio-chrome-0-2-*` profile directory, though its own chromedriver log shows the driver starting fine. So the driver came up and the worker died around it, ~750 ms in.
+The crashed worker's log stops after `Using Chromedriver … from cache directory` and never reaches `Started Chromedriver … on port` or `POST /session`. Healthy workers in the same run reach both. The crashed worker leaves no `wdio-chrome-0-N-*` profile directory, although its own chromedriver log shows the driver starting fine. The driver came up and the worker died around it, roughly 750 ms in.
 
-**This fully explains the missing Allure result and missing screenshot** — `afterTest` cannot run in a process that no longer exists. The spec that reports the failure is a victim of worker ordering, not a cause; there is nothing to fix in it.
+**That fully explains the missing Allure result and missing screenshot** — `afterTest` cannot run in a process that no longer exists.
 
-**Still unknown:** the crash mechanism. All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis.
+**Three things are settled:**
 
-**Round 6 ruled out the visual service, and renamed the problem.**
+- **It is not specific to any spec file — this is settled, not inferred.** Three captures, three different victims: `filter.spec`, then `login.spec`, then `completePurchase.spec`. Every one had the same exit code, the same log truncated at exactly the same line, the same missing profile directory. The crash takes whichever worker loses the startup race. **Do not go hunting for a cause inside a spec** — the finding's original title said `filter.spec` and that was the most misleading thing about it.
+- **`@wdio/visual-service` is ruled out.** Removing it and re-running the loop reproduced the crash at the same rate with the same signature.
+- **The rate is roughly 1 run in 25–40**, per-run rather than per-spec. It also appeared on a routine verification run on 2026-09-23, so it is very much still live.
 
-`@wdio/visual-service` was removed (#20) and the loop re-run: **crashed again, 1 of 40, identical exit code and identical truncation point.** Not the cause. Removing it was still right on its own merits.
+**What is still unknown: the crash mechanism.** All four workers resolve ChromeDriver from one shared cache directory under `AppData\Local\Temp` and spawn drivers within ~350 ms of each other. Plausible, unproven — keep it a hypothesis, not a conclusion.
 
-**The crash is not specific to `filter.spec`.** Round 6's casualty was `login.spec` on worker 0-3 — same signature, same truncated log, same missing profile dir, same `retried 2x`. The crash takes whichever worker loses the startup race. **Do not go hunting for a cause inside any individual spec file.**
+**Remaining untested experiment: `maxInstances: 2`.** Be clear about what a result means. Fewer crashes would be a *mitigation* that costs wall-clock time, not a root-cause fix; the mechanism would still be unexplained. Don't let it land in the audit as "fixed" if it lands as "papered over."
 
-**Remaining untested experiment:** `maxInstances: 2`.
+**How to reproduce.** Run the full suite in a loop with `--logLevel debug --outputDir <per-run dir>`, keeping logs only from runs that exit non-zero. 40 runs takes about four minutes. Read the launcher's `wdio.log` for the exit code and compare the crashed worker's spec log against a healthy one from the same run.
 
-A 40-run loop takes about four minutes. The script is worth recreating: run the full suite in a loop with `--logLevel debug --outputDir <per-run dir>`, and keep the logs only from runs that exit non-zero.
+**Beware the statistics.** At a 1-in-40 base rate, a clean 40-run batch is weak evidence — roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix. Interpret accordingly.
 
-**Also reproduced:** the `retried 2x` anomaly against a budget of 1. It correlates with the crash path rather than appearing at random — a lead, not the arithmetic puzzle it first looked like.
-
-### #17 — closed
-
-Round 9 added `hilo`, `az` and `za` as a data-driven table in `filter.spec` (suite is now 11 tests, verified failing when each option is paired with the wrong sort), and rewrote [architecture/projectArchitecture.md](architecture/projectArchitecture.md) from scratch. That document had a **split table row** splicing Layer 2's page inventory into Layer 3, on top of naming every file `.js`, omitting `tests/support/` entirely, and listing three utility functions that do not exist. Treat it as current now; keep it that way.
-
-### Tooling (#18–#27) — closed
-
-**All of #18–#27 is done** as of round 8. Nothing remains in this block.
+**Related loose end:** the `retried 2x` anomaly against a retry budget of 1 has reproduced in both captures. It correlates with the crash path rather than appearing at random, so it is a lead rather than the arithmetic puzzle it first looked like.
 
 ---
 
 ## Gotchas discovered the hard way
 
-**`onWorkerEnd(cid, exitCode, specs, retries)` — `retries` is the budget REMAINING, not the number used.** The launcher documents it as *"Number or retries remaining"*. Reading it as retries-used makes every spec on a fully green run report as flaky. Correct test is `SPEC_FILE_RETRIES - retries > 0`. This is implemented in `wdio.conf.ts`; don't "simplify" it back.
+**`await $$(...)` — the `await` is load-bearing, and ESLint says otherwise.** WDIO types `ChainablePromiseArray` as extending `AsyncIterators`, not `Promise`, so `@typescript-eslint/await-thenable` flags it. The runtime object *is* thenable. Probed directly: `await $$(...)` gives a real Array whose `.length` is a number; `$$(...).length` without the await is a Promise. Removing it makes `initialCount` a Promise and silently skips the loops in `clickAllIfExists` and `removeAllItemsFromCart` — **tests would still pass while doing nothing.** There is a scoped `eslint-disable-next-line` on it in `getElements`. Don't "clean it up."
 
-**One unexplained observation:** a single captured failure logged `was retried 2x` despite a budget of 1, which should be arithmetically impossible and did not happen in the controlled test used to verify #21. Recorded in finding #29. Not yet understood.
+**`onWorkerEnd(cid, exitCode, specs, retries)` — `retries` is the budget REMAINING, not the number used.** The launcher documents it as "Number or retries remaining." Reading it as retries-used reports every spec on a fully green run as flaky. Correct test is `SPEC_FILE_RETRIES - retries > 0`. Don't "simplify" it back.
 
-**`await $$(...)` — the `await` is load-bearing, and ESLint says otherwise.** WDIO types `ChainablePromiseArray` as extending `AsyncIterators`, not `Promise`, so `@typescript-eslint/await-thenable` flags it as awaiting a non-Promise. The runtime object *is* thenable. Probed: `await $$(...)` gives a real Array whose `.length` is a number; `$$(...).length` without the await is a Promise. Removing it would make `initialCount` a Promise and silently skip the loops in `clickAllIfExists` and `removeAllItemsFromCart` — tests would still "pass" while doing nothing. There is a scoped `eslint-disable-next-line` on it in `getElements`; **don't "clean it up".**
+**Allure's `addStep` and `addAttachment` return `Promise<void>`.** Not awaiting them is a floating promise. The screenshot attach in `afterTest` went unawaited from round 1 until round 7, which meant the failure screenshot could be lost during teardown — the exact thing finding #1 exists to prevent. ESLint caught it.
 
-**Allure's `addStep` and `addAttachment` return `Promise<void>`.** Not awaiting them is a floating promise. The screenshot attach in `afterTest` was unawaited from #1 until round 7, which meant the screenshot could be lost during teardown. Await them.
+**Singleton page objects are fine under parallel execution.** The old architecture doc claimed otherwise. Each spec file runs in its own worker *process*, so every worker gets its own module instances. Nothing is shared. Don't "fix" the singleton exports on that basis.
 
-**Credentials no longer come from the JSON directly.** `tests/support/credentials.support.ts` reads `SAUCE_USERNAME` / `SAUCE_PASSWORD` (and the `LOCKED_OUT_` pair) with the fixtures as fallback. Specs import from there, not from `placeHolderData.json`. The other fixture data (products, personal info, error message) still comes from the JSON.
+**Session state does not reset between `it` blocks.** One browser session serves a whole spec *file*. `resetBrowserState()` must stay in every `beforeEach`, and must run *after* navigation, since storage is origin-scoped.
 
-**`smoke` is a grep, not a suite, and that is deliberate.** `@smoke` tags individual tests spread across several spec files. Adding `smoke` to the `suites` map would select whole *files* and silently run more than was asked for. The on-demand workflow special-cases it for that reason.
-
-**Singleton page objects are fine under parallel execution.** The old architecture doc claimed they were not. Each spec file runs in its own worker *process*, so every worker gets its own module instances and nothing is shared. Don't "fix" the singleton exports on that basis.
-
-**Mechanical renames need a compiler.** Dropping the prefixes made a parameter and a local in `clickAllIfExists` both `element`. `tsc` caught the shadowing; a careful human reading would plausibly have missed it. Always `npx tsc --noEmit` after a bulk rename.
+**Cleanup belongs in hooks, never at the bottom of a test body.** A failing test does not run to completion, so trailing cleanup silently does not happen and the next test inherits dirty state.
 
 **Locators key off SauceDemo's `data-test` slugs, not visible text.** `UtilsMethods.toProductSlug()` turns "Sauce Labs Onesie" into `sauce-labs-onesie`, and `:has(button[data-test$='-sauce-labs-onesie'])` finds the card. The `$=` suffix match is deliberate — it survives the button flipping between `add-to-cart-` and `remove-`.
 
-**The live DOM was dumped before rewriting locators, and it paid off:** `inventory_item_name` no longer carries the trailing space the old selector matched on, so that locator had been dead, not merely fragile. Dump the DOM before guessing at attributes.
+**Dump the live DOM before rewriting locators.** Doing so revealed that `inventory_item_name` no longer carried the trailing space the old selector matched on — that locator had been dead, not merely fragile.
 
-**Session state does not reset between `it` blocks.** WebdriverIO creates one session per spec *file*. `resetBrowserState()` in `tests/support/session.support.ts` must stay in every `beforeEach`, and it must run *after* navigation, since storage is origin-scoped.
+**`getSelectorByValue` rejects quote characters by design.** Correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently.
 
-**`quote characters in locator values throw` by design.** `getSelectorByValue` rejects them rather than escaping, because correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently.
+**Credentials come from `tests/support/credentials.support.ts`,** which reads `SAUCE_USERNAME` / `SAUCE_PASSWORD` (and the `LOCKED_OUT_` pair) with the JSON as fallback. Specs import from there. Other fixture data still comes from `placeHolderData.json`.
+
+**`smoke` is a grep, not a suite, deliberately.** `@smoke` tags individual tests across several files. A `suites` entry would select whole *files* and quietly run more than was asked for.
+
+**Mechanical renames need a compiler.** Dropping the prefixes made a parameter and a local in `clickAllIfExists` both `element`. `tsc` caught the shadowing; a careful reader plausibly would not. Always run `npm run typecheck` after a bulk rename.
+
+---
+
+## Known stale document, not yet addressed
+
+**[consulting/.claude.md](consulting/.claude.md) has the same drift that finding #17 found in the architecture doc,** and nobody has been asked about it yet. It describes the project as "JavaScript ES6+ modules", refers to `tests/pages/page.js` and `[name].page.js` naming, documents test data as `JSON.parse(readFileSync(...))`, tells specs to load credentials from `tests/data/*.json`, and lists visual testing as an expertise area with "`@wdio/visual-service` is already configured with a baseline folder."
+
+All of that is now wrong. It is a persona/instructions file rather than project documentation, so it was left alone rather than rewritten unasked — **raise it with the owner before touching it.**
 
 ---
 
 ## Integration status
 
-Nothing is pushed. `origin` is `github.com/Lighting-Sun/wdio-framework`. The owner chose "keep the branch as-is" when offered merge/PR/keep, and has not revisited it. **Ask before pushing, merging, or opening a PR** — that decision is theirs.
+Nothing is pushed. `origin` is `github.com/Lighting-Sun/wdio-framework`. The owner chose "keep the branch as-is" when offered merge / PR / keep, and has not revisited it.
 
-Run `git diff --stat main..HEAD` for the current size of the branch.
+**Ask before pushing, merging, or opening a PR.** That decision is theirs.
+
+Worth raising, though: the branch is 27 commits deep and has never been reviewed by anyone but the owner. That is a growing amount of unreviewed work on one line.

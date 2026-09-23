@@ -1,9 +1,9 @@
 # WebdriverIO Framework Audit
 
 **Audience:** junior QA engineers working on this repo.
-**Date:** 2026-09-22
+**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 9)
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** fixes in progress — see Progress below.
+**Status:** **26 of 29 findings fixed. One open (#29), two deferred by decision (#2, #5).** See Progress below.
 
 ---
 
@@ -35,11 +35,13 @@
 
 **Two findings were discovered while fixing the others:** #28 (fixed) and #29 (open). The audit therefore runs to 29, not the original 27.
 
-**Current verification state** — re-checked at the end of round 5:
+**Current verification state** — re-checked 2026-09-23, after round 9:
 
-- `npx tsc --noEmit` — clean.
+- `npm run typecheck` — clean.
+- `npm run lint` — clean.
+- `npm run format:check` — clean.
 - Full suite — 4 spec files, **11 tests** passing (8 before round 9 added the three extra sort cases).
-- Green across 39 of 40 consecutive full-suite runs. The single failure is #29, now diagnosed as a worker-process crash during startup rather than anything in the test code.
+- **#29 still reproduces.** It appeared on a routine verification run on 2026-09-23; the immediate re-run was fully green. Across the two controlled 40-run loops it landed once each time. Nothing in the test code is implicated — see the finding.
 
 Each round's own evidence is in its commit message and in the status note on its finding.
 
@@ -503,6 +505,14 @@ This is the same class of defect as #6, which is why it survived that fix: #6 co
 > **This finding is therefore misnamed.** There is nothing special about `filter.spec` — the crash takes whichever worker loses the startup race. Any spec can be the victim, and the rate is per-run, not per-spec. Do not go looking for a cause inside any individual spec file.
 >
 > **Next experiment:** `maxInstances: 2`. That is now the only untested item from the original list, and it targets the startup race directly.
+>
+> **Round 10 — a third capture, and the spec-agnostic claim is now settled.**
+>
+> Captured again on 2026-09-23 at **1 of 25 runs** — a higher rate than the two earlier 1-in-40 batches, though the sample is far too small to call that a trend. It also appeared on a routine verification run the same day. The third crash took **`completePurchase.spec`** on worker 0-1: same exit code `3221226505`, same 424-byte log truncated at exactly `Using Chromedriver … from cache directory`, same missing `wdio-chrome-0-1-*` profile directory, same `retried 2x`.
+>
+> **Three captures, three different victims — `filter.spec`, `login.spec`, `completePurchase.spec`.** Any doubt that the crash is tied to a particular spec file is gone. It takes whichever worker loses the startup race.
+>
+> This also means the finding's original framing was the most misleading thing about it: it was filed as a `filter.spec` problem, and anyone who took that at face value would have spent their time in the wrong file.
 
 **Found during round 4. Not caused by the round-4 changes — a failure with the same signature occurred back in round 2, before them.**
 
