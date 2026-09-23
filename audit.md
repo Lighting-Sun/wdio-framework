@@ -25,8 +25,9 @@
 | `a208a0a` | Round 6 — finding #20; #29 narrowed |
 | `02729e2`, `69799e2` | Round 7 — findings #18, #19 |
 | `044188a` | Round 8 — findings #22–#27 |
+| `5b6ba89`, `501b953` | Round 9 — finding #17 |
 
-**Fixed — 25 findings:** #1, #3, #4, #6, #7, #8 (a side effect of rewriting the factory for #6/#7), #9–#16, and #18–#28.
+**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5) and #29.
 
 **The entire tooling and hygiene block (#18–#27) is now closed.**
 
@@ -37,7 +38,7 @@
 **Current verification state** — re-checked at the end of round 5:
 
 - `npx tsc --noEmit` — clean.
-- Full suite — 4 spec files, 8 tests passing (was 7; a cart-removal test was added).
+- Full suite — 4 spec files, **11 tests** passing (8 before round 9 added the three extra sort cases).
 - Green across 39 of 40 consecutive full-suite runs. The single failure is #29, now diagnosed as a worker-process crash during startup rather than anything in the test code.
 
 Each round's own evidence is in its commit message and in the status note on its finding.
@@ -79,7 +80,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 14 | Misleading names and typos | Medium | ✅ Fixed |
 | 15 | Dead code | Medium | ✅ Fixed |
 | 16 | `async` functions that do nothing asynchronous (plus two latent bugs) | Medium | ✅ Fixed |
-| 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ⬜ Open |
+| 17 | `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale | Medium | ✅ Fixed |
 | 18–27 | Tooling and hygiene | Low | ✅ All fixed |
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
@@ -413,7 +414,19 @@ Two real bugs in the same file:
 
 ---
 
-### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale ⬜ Open
+### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale ✅ Fixed
+
+> **Fixed in `5b6ba89` (tests) and `501b953` (doc).**
+>
+> **Part 1 — sort coverage.** `filter.spec` now runs one case per dropdown option (`lohi`, `hilo`, `az`, `za`) from a data-driven table. Each case reads the list the page is showing, sorts it locally, then asserts the page reaches the same order — so adding or renaming a product does not break the tests, while a broken sort on the site still does. Needed three new sort helpers and an `inventoryItemName` locator with `getTextFromNames` / `expectTextFromNames`, since the page object could read prices but had no accessor for the name column at all.
+>
+> **Verified the tests can fail**, rather than trusting four green ticks: pairing each option with the wrong sort function (`lohi`↔`hilo`, `az`↔`za`) fails all four. Suite is now 11 tests, up from 8.
+>
+> **Part 2 — the doc was worse than stale, it was corrupted.** The `login.page.js` row of Layer 2's inventory table was split in half, with its tail landing inside Layer 3's table header — dragging six page rows and Layer 2's tradeoff paragraph into the UI Components section. Two layers described each other's files.
+>
+> Factual drift found on top of that, all checked against the code: every file referenced as `.js`; `tests/support/` absent entirely; Layer 5 listing three utility functions that do not exist (`sortArrayAlphabetically`, `getRandomNumber`, `getPriceAsNumber`); test data documented as `readFileSync`; the factory inventory missing every assertion helper and describing `clickAllIfExists` as unbounded; and a "parallel execution" gap claiming singleton exports break under multiple workers — **which is wrong**, since each spec file runs in its own worker process with its own module instances. That one was corrected rather than carried forward.
+>
+> Rewritten to seven layers, with Test Support added and pure utilities split from browser interaction. The rules now carry the reasoning these audit rounds produced, so the traps are documented where someone editing the code will meet them.
 
 `tests/specs/filter.spec.ts` tests only `lohi`. The architecture doc (`architecture/projectArchitecture.md`) claims it covers "all four product sort options" — **the doc is already out of date**, and it still refers to `.js` files that were converted to `.ts` in the most recent commit.
 
@@ -606,7 +619,7 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 
 ## Suggested order of work
 
-**✅ Done — rounds 1 to 8:**
+**✅ Done — rounds 1 to 9:**
 
 | Round | Commit | Findings |
 |-------|--------|----------|
@@ -618,13 +631,13 @@ Fine for SauceDemo, which is public. Build the habit now anyway: read credential
 | 6 | `a208a0a` | #20; #29 narrowed — visual service ruled out |
 | 7 | `02729e2`, `69799e2` | #18, #19 |
 | 8 | `044188a` | #22, #23, #24, #25, #26, #27 |
+| 9 | `5b6ba89`, `501b953` | #17 |
 
-**Recommended next, in this order:**
+**Recommended next:**
 
-1. **#29 — finish it.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. Note the crash is not specific to any spec file — do not go hunting inside one.
-2. **#17 — sort coverage, then the architecture doc.** Add `hilo`, `az`, `za` as a data-driven loop. The doc is actively wrong rather than merely thin: it claims four sort options are covered, still refers to `.js` files, and predates the `tests/support/` layer entirely.
+1. **#29 — the only open finding left.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The remaining untested experiment is `maxInstances: 2`, which targets the startup race directly. The crash is not specific to any spec file — do not go hunting inside one.
 
-These two are all that is left besides the deferred pair.
+Everything else on this list is closed except the two deferred findings below.
 
 **🕓 Deferred to a future pass:**
 

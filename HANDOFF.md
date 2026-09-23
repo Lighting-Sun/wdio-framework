@@ -11,7 +11,7 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). It was audited, producing 27 findings; two more (#28, #29) were discovered while fixing them. Fixes are being applied in priority order, in rounds.
 
-**Of 29 findings: 25 fixed, 2 deferred by the owner's explicit decision, 2 open.** The two open ones are #29 (diagnosed and narrowed, not fixed) and #17. The whole tooling block #18–#27 is closed.
+**Of 29 findings: 26 fixed, 2 deferred by the owner's explicit decision, 1 open.** The only open finding is **#29**, which is diagnosed and narrowed but not fixed. Everything else is done.
 
 `audit.md` carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. **Keep it current** — it is how the next session knows where things stand. Every fix round has been two commits: one `fix:`/`refactor:` for the code, one `docs:` updating the audit.
 
@@ -50,7 +50,7 @@ This matters more than any individual fix. The owner has consistently valued evi
 npm run typecheck                      # tsc --noEmit — must be clean before any commit
 npm run lint                           # ESLint — also must be clean before any commit
 npm run format                         # Prettier (code only; *.md and .github are ignored)
-npm test                               # full suite: 4 spec files, 8 tests, ~6s
+npm test                               # full suite: 4 spec files, 11 tests, ~6s
 npm test -- --spec tests/specs/filter.spec.ts
 npm test -- --suite loginAndPurchase
 WDIO_LOG_LEVEL=info npm test           # raise log level without touching the config
@@ -95,9 +95,9 @@ A 40-run loop takes about four minutes. The script is worth recreating: run the 
 
 **Also reproduced:** the `retried 2x` anomaly against a budget of 1. It correlates with the crash path rather than appearing at random — a lead, not the arithmetic puzzle it first looked like.
 
-### #17 — sort coverage and the stale architecture doc (Medium)
+### #17 — closed
 
-`filter.spec.ts` tests only `lohi`; add `hilo`, `az`, `za` as a data-driven loop. Then fix [architecture/projectArchitecture.md](architecture/projectArchitecture.md), which is **actively wrong**: it claims four sort options are covered and still refers to `.js` files that became `.ts` before this work began. It also predates the `tests/support/` layer entirely.
+Round 9 added `hilo`, `az` and `za` as a data-driven table in `filter.spec` (suite is now 11 tests, verified failing when each option is paired with the wrong sort), and rewrote [architecture/projectArchitecture.md](architecture/projectArchitecture.md) from scratch. That document had a **split table row** splicing Layer 2's page inventory into Layer 3, on top of naming every file `.js`, omitting `tests/support/` entirely, and listing three utility functions that do not exist. Treat it as current now; keep it that way.
 
 ### Tooling (#18–#27) — closed
 
@@ -118,6 +118,8 @@ A 40-run loop takes about four minutes. The script is worth recreating: run the 
 **Credentials no longer come from the JSON directly.** `tests/support/credentials.support.ts` reads `SAUCE_USERNAME` / `SAUCE_PASSWORD` (and the `LOCKED_OUT_` pair) with the fixtures as fallback. Specs import from there, not from `placeHolderData.json`. The other fixture data (products, personal info, error message) still comes from the JSON.
 
 **`smoke` is a grep, not a suite, and that is deliberate.** `@smoke` tags individual tests spread across several spec files. Adding `smoke` to the `suites` map would select whole *files* and silently run more than was asked for. The on-demand workflow special-cases it for that reason.
+
+**Singleton page objects are fine under parallel execution.** The old architecture doc claimed they were not. Each spec file runs in its own worker *process*, so every worker gets its own module instances and nothing is shared. Don't "fix" the singleton exports on that basis.
 
 **Mechanical renames need a compiler.** Dropping the prefixes made a parameter and a local in `clickAllIfExists` both `element`. `tsc` caught the shadowing; a careful human reading would plausibly have missed it. Always `npx tsc --noEmit` after a bulk rename.
 
