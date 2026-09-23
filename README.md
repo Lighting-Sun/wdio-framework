@@ -12,7 +12,10 @@ You can run this repository without downloading it
 
 3. Click on the **Run Workflow** Option  
 4. you can customize your run by selecting **environment**, **browser** and **suite**
-5. Optionally you can also check the allure report option if you want to be able to download the allure report (see [Visual Studio Code](https://github.com/Lighting-Sun/wdio-framework/edit/main/README.md#visual-studio-code-only-follow-this-if-you-want-to-open-the-resulting-allure-report) section bellow on how to visualize the report)
+   - Use **qa**. The **dev** option points at a target that doesn't currently work (known issue, audit #5)
+   - Leaving **suite** empty runs everything; **smoke** runs only the tests tagged `@smoke`
+5. Optionally you can also check the allure report option if you want to be able to download the allure report (see the [Visual Studio Code](#visual-studio-code-only-follow-this-if-you-want-to-open-the-resulting-allure-report) section below on how to visualize the report)
+   - The report is only uploaded when all tests pass. On a failed run, read the **Test** step's log instead (known issue, audit #2)
 6. Click on run worflow (you might need to reload the page so the new execution is visible)
 ![RunningWorkflow](https://github.com/user-attachments/assets/ff199856-d8e1-4e89-a013-664de3fe9afb)
 
@@ -75,7 +78,7 @@ You can run this repository without downloading it
 
 #### Node JS
 
-1. You must have [Node.js](https://nodejs.org/en) installed (Node.js LTS version recommended)
+1. You must have [Node.js](https://nodejs.org/en) **20.19.0 or newer** installed. The exact version CI uses is pinned in `.nvmrc`; with nvm, run `nvm use` in the project folder
 2. When you are installing Node.js, make sure to check this option
 - [x] Automatically install the necesary tools. Note that this will also install Chocolatey. The script will pop-up in a new window after the installation completes.
 
@@ -127,15 +130,24 @@ These plugins are Prettier and ESlint
 
 * To Run All test cases type
   ```
-  npx wdio
+  npm test
   ```
-* To run in a specific browser apppend the browser name **chrome** and **firefox** are the only valid options
+* To run in a specific browser add the browser name after `--`; **chrome** (the default) and **firefox** are the only valid options
   ```
-  npx wdio --browser firefox
+  npm test -- --browser firefox
   ```
-* To run a specific suite append the suite name **regression** and **loginAndPurchase** are the valid options
+* To run a specific suite add the suite name after `--`; **regression** and **loginAndPurchase** are the valid options
   ```
-  npx wdio --suite regression
+  npm test -- --suite regression
+  ```
+* To run only the smoke tests (tests tagged `@smoke`)
+  ```
+  npm test -- --mochaOpts.grep smoke
+  ```
+* Before committing, both of these must pass
+  ```
+  npm run typecheck
+  npm run lint
   ```
 
 #### Open allure report

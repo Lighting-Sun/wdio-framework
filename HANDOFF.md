@@ -50,7 +50,7 @@ This matters more than any individual fix. The owner has consistently valued evi
 4. **Report honestly when a fix is wrong.** The `onWorkerEnd` hook was implemented backwards first and the verification run caught it. Finding #1's fix turned out to be incomplete for six rounds. Both were surfaced plainly and recorded in the audit, not quietly patched.
 5. **Say what was left untouched.** Each round lists the adjacent findings it did *not* fix, so the diff stays reviewable.
 6. **Commit messages carry the why and the verification evidence.** Read `git log` before writing one.
-7. Attribution on every commit: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
+7. Every commit carries a `Co-Authored-By:` trailer naming the model that did the work. Rounds 1–11 used `Claude Opus 5`; round 12 used `Claude Opus 5.5 (1M context)`. Use whatever the current session's attribution instruction specifies.
 
 ---
 
@@ -75,7 +75,7 @@ gh workflow run "CI on demand" --ref <branch> -f environment=qa -f browser=chrom
 gh run watch <run-id> --exit-status
 ```
 
-`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
+`typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx** and Chrome runs headless. Rounds 1–11 ran locally on Windows with Node 24; round 12 ran on macOS with Node 26.8.1. Either way, local Node is newer than CI's 20.19.0.
 
 ### CI status
 
@@ -183,7 +183,7 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 **None of this drift was fixed in code.** It is documented, and each item is a small separate change for the owner to approve. The consulting doc recommends an `expectUrlContains` factory helper for the URL checks; that decision is the owner's and hasn't been made.
 
-**Still stale:** the root [.claude.md](.claude.md) says "29 findings, 26 fixed across nine rounds". It was outside the requested scope.
+**Then the rest of the documentation was brought into line in the same pass,** so nothing contradicts anything else before the PR: the root [.claude.md](.claude.md) (status, the `browser.*` rule, structure, commands), [README.md](README.md) (`npm test` instead of `npx wdio`, the Node 20.19.0 minimum, the `dev` and red-run-artifact caveats), [guides/documentationGuide.md](guides/documentationGuide.md) (its singleton example contradicted this project, and it now requires a verification stamp), and a status note on audit #17.
 
 ---
 

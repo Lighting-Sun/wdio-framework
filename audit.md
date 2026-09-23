@@ -464,6 +464,10 @@ Two real bugs in the same file:
 
 ### 17. `filter.spec.ts` covers 1 of 4 sort options; architecture doc is stale ✅ Fixed
 
+> **Round 12: the doc drifted again, and has been re-verified.** After the merge, `architecture/projectArchitecture.md`, `architecture/.claude.md` and `consulting/.claude.md` were regenerated and each claim checked against the code at `9f18c20`. Several rules held only on paper: pages and specs "never" called `browser.*`, but specs make 4 `expect(browser).toHaveUrl` calls, `cart.page.ts` calls `browser.waitUntil` and `login.page.ts` reads `browser.options`. "Every" factory method logs an Allure step, but three don't. The overview page "reads tax and total", but it reads the subtotal only. The docs now describe the code as it is. **The code itself was not changed.** The drift, plus 8 public read-once getters with no callers, is listed under *Known Gaps* in the architecture doc. None of it is tracked as a new finding here; whether it should be is the owner's call.
+>
+> The architecture doc now carries a *Verified against the code* date and commit, and `guides/documentationGuide.md` requires one, so the next drift is at least visible.
+
 > **Fixed in `5b6ba89` (tests) and `501b953` (doc).**
 >
 > **Part 1 — sort coverage.** `filter.spec` now runs one case per dropdown option (`lohi`, `hilo`, `az`, `za`) from a data-driven table. Each case reads the list the page is showing, sorts it locally, then asserts the page reaches the same order — so adding or renaming a product does not break the tests, while a broken sort on the site still does. Needed three new sort helpers and an `inventoryItemName` locator with `getTextFromNames` / `expectTextFromNames`, since the page object could read prices but had no accessor for the name column at all.
@@ -784,6 +788,7 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
    Remember the statistics: at a 1-in-40 base rate a clean 40-run batch is weak evidence, roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix.
 
 2. **Bump `actions/checkout`, `actions/setup-node` and `actions/upload-artifact` from `@v4` to `@v5`.** Every run warns that they target Node 20 and are being force-run on Node 24. This isn't an audit finding, just housekeeping, but worth doing before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19. Check it with a `ci-on-demand.yml` dispatch.
+3. **Decide what to do about the code drift found in round 12** (see the #17 status note): URL assertions made with `expect(browser)` in specs, the repeated `browser.waitUntil` in `cart.page.ts`, `browser.options` in `login.page.ts`, and 8 unused read-once getters. Options are to fix them, to promote them to findings here, or to accept them as documented gaps. Until then they stay listed under *Known Gaps* in the architecture doc.
 
 Everything else on this list is closed except the two deferred findings below.
 
