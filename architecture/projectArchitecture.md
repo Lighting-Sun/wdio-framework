@@ -1,6 +1,6 @@
 # wdio-framework Architecture
 
-**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (round 13). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
+**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (PR #25). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
 
 ## Purpose
 
@@ -14,7 +14,7 @@ This document is for deciding where new code belongs, how the layers connect, an
 - When does a helper belong in `tests/support/` rather than `tests/utils/`?
 - What has to change if I add a test environment?
 
-**Maintenance rule:** update this document in the same commit as any change that adds a layer, moves a responsibility, adds a cross-cutting concern, or opens or closes a known gap. Then update the *Verified against the code* line. Treat drift in this document as a bug: it has happened twice already (audit #17, and again before this revision).
+**Maintenance rule:** update this document in the same commit as any change that adds a layer, moves a responsibility, adds a cross-cutting concern, or opens or closes a known gap. Then update the *Verified against the code* line. Treat drift in this document as a bug: it has happened twice already.
 
 ---
 
@@ -221,7 +221,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - A new environment needs an entry in the `environments` map in `wdio.conf.ts` and an option in `ci-on-demand.yml`'s `environment` input.
 - Workflow inputs go through `env:` and are quoted where used, so a future free-text input can't become shell injection.
 - `.nvmrc` is the only source of the Node version. Both workflows read it with `node-version-file`.
-- **CI trigger policy (owner decision, audit #30):** `ci.yml` runs on pull requests to `main` and on pushes to `main`, never on feature-branch pushes. To check a branch before a PR, dispatch `ci-on-demand.yml`.
+- **CI trigger policy (settled owner decision):** `ci.yml` runs on pull requests to `main` and on pushes to `main`, never on feature-branch pushes. To check a branch before a PR, dispatch `ci-on-demand.yml`.
 
 **Inventory:**
 
@@ -324,11 +324,13 @@ Only gaps that change how new code should be written.
 
 | Area | Status |
 |------|--------|
-| Rare worker crash (audit #29, **open**) | About 1 full run in 25–40, a worker process dies during ChromeDriver startup with Windows exit code `0xC0000409`, before any test runs. There's no Allure result or screenshot, and whichever spec it held is reported failed. Not spec-specific. Seen only on the Windows dev machine, never in CI. Untested experiments: a per-worker ChromeDriver cache directory, then `maxInstances: 2`. **Don't debug it inside a spec.** |
-| CI artifact on a red run (audit #2, deferred) | Neither workflow's upload step has `if: always()`, so the Allure report exists only for green runs. On a red run, read the job log. |
-| `--env dev` (audit #5, deferred) | Points at `saucedemo.com/v1/`, which is not a working target. Use `qa`. |
+| Rare worker crash (**open**) | About 1 full run in 25–40, a worker process dies during ChromeDriver startup with Windows exit code `0xC0000409`, before any test runs. There's no Allure result or screenshot, and whichever spec it held is reported failed. Not spec-specific. Seen only on the Windows dev machine, never in CI. Untested experiments: a per-worker ChromeDriver cache directory, then `maxInstances: 2`. **Don't debug it inside a spec.** |
+| CI artifact on a red run (deferred by owner decision) | Neither workflow's upload step has `if: always()`, so the Allure report exists only for green runs. On a red run, read the job log. |
+| `--env dev` (deferred by owner decision) | Points at `saucedemo.com/v1/`, which is not a working target. Use `qa`. |
 | `browser.*` outside its sanctioned places | Beyond the factory, Test Support and `Page.open()`: specs make 4 `expect(browser).toHaveUrl` calls, `login.page.ts` reads `browser.options.baseUrl`, and `cart.page.ts` calls `browser.waitUntil` after `clickAllIfExists`, which already performs that same wait. URL assertions need either a factory helper or an explicit exception; that decision is still to be made. Don't add new ones in the meantime. |
-| Read-once getters with no callers | Eight public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reintroduces the audit #6 race. |
+| Read-once getters with no callers | Eight public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reads once and races the page. |
+| TypeScript 7 | Held on 6.0.x: every `typescript-eslint` release declares `typescript <6.1.0`. When one supports 7, check with `npm view typescript-eslint peerDependencies.typescript`, then `npm install -D typescript@^7 typescript-eslint@<that version>`, run `npm run typecheck` and `npm run lint`, and treat every new error as real (TS 7 is a rewrite). Check `eslint-plugin-wdio`'s peer range too, then run the suite and dispatch CI before a PR. |
+| Node 26 | Not supported yet; use Node 24 (`.nvmrc`). On 26, `@puppeteer/browsers` extracts ChromeDriver's licence files but not the binary, and WDIO then refuses the half-filled cache folder, so every test fails at startup. WDIO before 9.32 also couldn't create sessions on 26. |
 | Firefox | Configured and offered by `ci-on-demand.yml`, but no recorded CI run has used it. Treat it as unverified. |
 | Environment-specific test data | Only `placeHolderData.json` exists, so per-environment values have nowhere to go. |
 | Side-menu coverage | Only Logout is exercised. All Items, About and Reset App State have no tests. |
