@@ -1,9 +1,9 @@
 # WebdriverIO Framework Audit
 
 **Audience:** junior QA engineers working on this repo.
-**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 10 — first CI verification)
+**Written:** 2026-09-22 · **Last updated:** 2026-09-23 (round 11)
 **Scope:** all source files, `wdio.conf.ts`, `tsconfig.json`, both GitHub Actions workflows, and the architecture doc.
-**Status:** **26 of 31 findings fixed. Two open (#29, #31), two deferred by decision (#2, #5), one closed by decision (#30).** See Progress below.
+**Status:** **27 of 31 findings fixed. One open (#29), two deferred by decision (#2, #5), one closed by decision (#30).** See Progress below.
 
 ---
 
@@ -27,8 +27,9 @@
 | `044188a` | Round 8 — findings #22–#27 |
 | `5b6ba89`, `501b953` | Round 9 — finding #17 |
 | _(no code change)_ | Round 10 — first CI run on the branch; #30 raised and closed by decision, #31 opened |
+| `b07abcc` | Round 11 — finding #31; verified by a second CI run |
 
-**Fixed — 26 findings:** #1, #3, #4, and #6–#28 — that is, everything except the two deferred (#2, #5), the one closed by decision (#30), and the two open (#29, #31).
+**Fixed — 27 findings:** #1, #3, #4, #6–#28 and #31 — that is, everything except the two deferred (#2, #5), the one closed by decision (#30), and the one open (#29).
 
 **The entire tooling and hygiene block (#18–#27) is now closed** as originally written, though #30 and #31 are follow-ons from it that only a real CI run could expose.
 
@@ -36,7 +37,7 @@
 
 **Closed by decision — 1 finding:** #30. The CI trigger policy is intentional; see the finding. This is distinct from deferral — nothing about it is scheduled for later.
 
-**Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 (closed by decision) and #31 (open), both raised by round 10's CI run. The audit therefore runs to 31, not the original 27.
+**Four findings were discovered while fixing the others:** #28 (fixed), #29 (open), and #30 (closed by decision) and #31 (fixed), both raised by round 10's CI run. The audit therefore runs to 31, not the original 27.
 
 **Current verification state** — re-checked 2026-09-23, after round 10:
 
@@ -44,7 +45,8 @@
 - `npm run lint` — clean.
 - `npm run format:check` — clean.
 - Full suite — 4 spec files, **11 tests** passing (8 before round 9 added the three extra sort cases).
-- **The suite now also passes in real CI** — see *CI verification* below. Locally it was Windows and Node 24; CI is ubuntu and Node 20.17.0, so that is the first evidence the framework is not accidentally tied to one machine.
+- **The suite passes in real CI** on Node 20.19.0 as of round 11 ([run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334)), with zero `EBADENGINE` warnings.
+- **The suite also passed in CI on Node 20.17.0** — see *CI verification* below. Locally it was Windows and Node 24; CI is ubuntu and Node 20.17.0, so that is the first evidence the framework is not accidentally tied to one machine.
 - **#29 still reproduces.** It appeared on a routine verification run on 2026-09-23; the immediate re-run was fully green. Across the two controlled 40-run loops it landed once each time. Nothing in the test code is implicated — see the finding. It has **not** been seen in CI, but one green ubuntu run is no evidence either way against a Windows-only crash at a 1-in-25-to-40 rate.
 
 ### CI verification — 2026-09-23
@@ -109,7 +111,7 @@ The findings below are about **reliability**, **diagnosability**, and **habits t
 | 28 | Sort assertion does not wait for the list to re-render | High | ✅ Fixed |
 | 29 | A worker process crashes rarely during startup under parallel load | High | ⬜ Open — root cause identified |
 | 30 | `ci.yml` never runs on a feature branch | Medium | ✋ Closed by decision |
-| 31 | `.nvmrc` pins a Node version the dependency tree no longer supports | Low | ⬜ Open |
+| 31 | `.nvmrc` pins a Node version the dependency tree no longer supports | Low | ✅ Fixed |
 
 🕓 **Deferred** = accepted as valid, but scheduled for future work rather than the current pass. The severity is unchanged — these are still critical findings, they are just not being fixed right now.
 
@@ -689,7 +691,24 @@ So 29 commits of work, including a rewrite of both workflow files, sat on the re
 
 **Note the dead branch name.** The push trigger still lists `continous-integration` (sic — the typo is in the repo), a branch whose pull requests were all merged back in 2024. It is doing nothing now.
 
-### 31. `.nvmrc` pins a Node version the dependency tree no longer supports ⬜ Open
+### 31. `.nvmrc` pins a Node version the dependency tree no longer supports ✅ Fixed
+
+> **Fixed in `b07abcc`.** `.nvmrc` bumped to `20.19.0` and `engines.node` to `>=20.19.0` — the lowest version satisfying every range, and still on the Node 20 LTS line, so nothing else about the setup had to move.
+>
+> **Verified in CI, not by assertion.** A local install would have proved nothing: this machine runs Node 24, where all three ranges already pass, so the warnings cannot reproduce locally at all. Dispatched [run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334) and compared the install log against the previous run's:
+>
+> | | run 35840206691 (20.17.0) | run 35844385334 (20.19.0) |
+> |---|---|---|
+> | `setup-node` resolved | `node: v20.17.0` | `node: v20.19.0` |
+> | `EBADENGINE` warnings | **14** | **0** |
+> | `npm warn deprecated` | 4 (`glob@10.5.0`, `glob@8.1.0`, `inflight@1.0.6`, `whatwg-encoding@3.1.1`) | the same 4 |
+> | Suite | 4 spec files, 11 tests passing | 4 spec files, 11 tests passing |
+>
+> The deprecation warnings are listed to show what did *not* change — they are unrelated transitive packages, they were there before, and the bump neither fixed nor caused them. Only the engine warnings moved.
+>
+> **Checked the semver independently of the run,** since a green CI job says whether the install succeeded, not whether every range is satisfied: `semver.satisfies` against all three requirements returns FAIL for `20.17.0` and PASS for `20.19.0` on each.
+>
+> **Not addressed here:** the runner's own Node 20 deprecation notice for `actions/checkout@v4`, `setup-node@v4` and `upload-artifact@v4`. That is about the action runtimes, not `.nvmrc`, and it still appears on the green run.
 
 **Where:** `.nvmrc` (`20.17.0`) and `package.json` (`engines: { node: ">=20.17.0" }`)
 
@@ -733,12 +752,12 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 | 8 | `044188a` | #22, #23, #24, #25, #26, #27 |
 | 9 | `5b6ba89`, `501b953` | #17 |
 | 10 | _(no code change)_ | First CI run on the branch; #30 raised then closed by decision, #31 opened |
+| 11 | `b07abcc` | #31 — Node pin bumped to 20.19.0, verified in CI |
 
 **Recommended next:**
 
-1. **#31 — bump `.nvmrc` to `20.19.0`.** Do this first because it is a one-line change with a defined success condition: re-dispatch CI and watch the `EBADENGINE` count go from 14 to 0. Cheap, verifiable, done.
-2. **`ci.yml` has still never run.** #30 is closed — the trigger policy stays — so the way it runs is a pull request to `main`, which also gets 29 unreviewed commits in front of a reader. Whether and when to open one is the owner's call, not a technical one. Until then, use the on-demand dispatch for branch checks.
-3. **#29 — the long-standing open finding.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
+1. **`ci.yml` has still never run.** #30 is closed — the trigger policy stays — so the way it runs is a pull request to `main`, which also gets 29 unreviewed commits in front of a reader. Whether and when to open one is the owner's call, not a technical one. Until then, use the on-demand dispatch for branch checks.
+2. **#29 — the last open finding.** The root cause is identified (a worker-process crash, exit code `0xC0000409`, during ChromeDriver startup); the crash *mechanism* is not. `@wdio/visual-service` has been ruled out. The crash is not specific to any spec file — do not go hunting inside one. Two experiments remain:
    - **`maxInstances: 2`.** Targets the startup race directly. Be honest about what a result means: fewer crashes is a *mitigation* that costs wall-clock time, not a root-cause fix, and it must not land in this document as "fixed" if it lands as "papered over."
    - **A per-worker ChromeDriver cache directory.** Cheaper, and strictly more informative. The shared cache under `AppData\Local\Temp` is the stated hypothesis and nothing has yet tested it directly; giving each worker its own directory tests contention without paying the serialization cost, and unlike `maxInstances: 2` a positive result would actually *explain* the mechanism rather than just suppress the symptom.
 

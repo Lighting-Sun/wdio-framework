@@ -11,9 +11,9 @@
 
 A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://www.saucedemo.com/). An audit produced 27 findings; four more surfaced while fixing them — #28 and #29 during the rounds, then #30 and #31 from round 10's first CI run — so the audit runs to 31.
 
-**26 fixed · 2 deferred by the owner's decision · 1 closed by decision · 2 open.**
+**27 fixed · 2 deferred by the owner's decision · 1 closed by decision · 1 open.**
 
-The open findings are **#29** and **#31**. #29 is diagnosed, narrowed, and has two untested experiments left. #31 is a one-line `.nvmrc` bump. **#30 is closed by decision** — the CI trigger policy is intentional. Both #30 and #31 came out of round 10's first real CI run; see *CI status* below.
+The one open finding is **#29** — diagnosed, narrowed, two untested experiments left. **#30 is closed by decision** (the CI trigger policy is intentional) and **#31 was fixed in round 11** (`.nvmrc` → 20.19.0, verified in CI). Both came out of round 10's first real CI run; see *CI status* below.
 
 Nine rounds of work are on the branch. Each round is two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
 
@@ -88,7 +88,9 @@ To check a branch before a PR exists, **dispatch `ci-on-demand.yml` against it**
 **Two things still to know:**
 
 - **`ci.yml` itself has still never run.** The dispatch exercises `ci-on-demand.yml` only. They share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it — and under the #30 decision that is the intended route, so it stays unproven until a PR is opened.
-- **The run opened finding #31.** 14 `EBADENGINE` warnings: the ESLint 10 tree, `yargs@18`, `undici@7` and `cheerio` all want `^20.19.0 || ^22.13.0 || >=24`, and `.nvmrc` pins `20.17.0`. Warnings only, everything passed — but it means #18 and #23 landed in the same pass and disagreed with each other. Bumping `.nvmrc` to `20.19.0` clears all 14.
+- **The run opened finding #31, now fixed in round 11.** 14 `EBADENGINE` warnings — the ESLint 10 tree, `yargs@18`, `undici@7` and `cheerio`, carrying three distinct requirements whose binding constraint is `^20.19.0` — against `.nvmrc`'s `20.17.0`. #18 and #23 had landed in the same pass and disagreed. `.nvmrc` is now `20.19.0` and a second dispatch ([run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334)) confirmed the count dropped 14 → 0 with the suite still green.
+
+  **Note for any future Node bump: it cannot be verified locally.** This machine runs Node 24, where every range already passes, so the warnings do not reproduce here at all. The count has to be read out of a CI install log.
 
 ---
 
