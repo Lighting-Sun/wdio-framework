@@ -1,6 +1,6 @@
 # Handoff — WebdriverIO framework audit remediation
 
-**Written:** 2026-09-23 (replaces the 2026-09-22 handoff; corrected after round 10)
+**Written:** 2026-09-23, current as of round 11 (replaces the 2026-09-22 handoff)
 **Branch:** `fix/audit-critical-findings` — ahead of `main`, **pushed to `origin`, not merged**
 **Working tree:** clean
 **Read first:** [audit.md](audit.md). It is the plan, the spec and the status tracker in one document.
@@ -15,7 +15,7 @@ A practice WebdriverIO + TypeScript framework testing [saucedemo.com](https://ww
 
 The one open finding is **#29** — diagnosed, narrowed, two untested experiments left. **#30 is closed by decision** (the CI trigger policy is intentional) and **#31 was fixed in round 11** (`.nvmrc` → 20.19.0, verified in CI). Both came out of round 10's first real CI run; see *CI status* below.
 
-Nine rounds of work are on the branch. Each round is two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
+Eleven rounds of work are on the branch — 33 commits, 37 files, +3,645/−1,486. Most rounds are two commits: one `fix:`/`refactor:`/`chore:`/`test:` for the code, one `docs:` updating the audit. Round 10 is the exception: it changed no code, only ran CI for the first time and recorded what that exposed. `git log --oneline main..HEAD` is the list; `git diff --stat main..HEAD` is the size.
 
 **Keep `audit.md` current.** It carries a Progress section, a status column in the priority table, and a status blockquote on every finding that has been touched. That is how the next session knows what happened.
 
@@ -75,26 +75,30 @@ gh run watch <run-id> --exit-status
 
 `typecheck` and `lint` both run in CI, before the suite, in both workflows. The old `wdio` script is gone — `test` takes arguments after `--`. Node version lives in `.nvmrc` (20.19.0); both workflows read it via `node-version-file`. Runner is **tsx**, Chrome runs headless, Node 24 locally.
 
-### CI status — corrected in round 10
+### CI status
 
-An earlier version of this handoff said the CI changes had never run *because nothing was pushed*. **Both halves of that were wrong, in opposite directions.**
+**CI has now run, twice, and both runs were green.** Before round 10 it never had — every CI change from round 8 had been written, reasoned about, and never executed.
 
-The branch **was** pushed, twice, on 2026-09-23. But the pushes started **no workflow at all**, because `ci.yml` triggers only on pushes to `main` / `continous-integration` and on pull requests to `main` — and this branch is neither.
+**A feature-branch push starts no run at all, by design.** `ci.yml` triggers on pushes to `main` / `continous-integration` and on pull requests to `main`. This branch matches neither, so the pushes on 2026-09-23 started nothing. The owner confirmed that policy the same day — finding #30 is **closed, not open**. Do not expect a push to trigger CI, and do not "fix" the triggers.
 
-**That is intentional, and the owner confirmed it on 2026-09-23.** Finding #30 is closed, not open: CI runs at PR time and on `main`, never on a feature-branch push. Do not expect a push to start a run, and do not "fix" the triggers.
+**To check a branch before a PR exists, dispatch `ci-on-demand.yml` against it.** Under this policy that is the supported path, not a workaround. The command is in the Commands section above.
 
-To check a branch before a PR exists, **dispatch `ci-on-demand.yml` against it** — under this policy that is the supported path, not a workaround. Round 10 did exactly that. [Run 35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) went **green in 44 s**, and every round-8 CI change was confirmed to do its job — `.nvmrc` resolving to 20.17.0, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines, all 11 tests passing on ubuntu, and the artifact genuinely uploading (1,026,451 bytes, verified through the API rather than from the green step, since `if-no-files-found: warn` lets that step pass on nothing). The evidence table is in `audit.md` under *CI verification*.
+| Run | Node | Result |
+|---|---|---|
+| [35840206691](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35840206691) | 20.17.0 | Green in 44 s. First execution of every round-8 CI change. |
+| [35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334) | 20.19.0 | Green. Verified the #31 bump: `EBADENGINE` 14 → 0. |
 
-**Two things still to know:**
+The first run confirmed each round-8 change individually rather than resting on the green checkmark: `.nvmrc` resolving through `node-version-file`, typecheck and lint running before the suite, the collapsed Test step building the right arguments, `WDIO_LOG_LEVEL` producing 1,881 INFO lines where local gives 0, 11 tests passing on ubuntu, `onWorkerEnd` correctly silent on green, and the artifact genuinely uploading — 1,026,451 bytes, checked through the REST API rather than from the green step, because `if-no-files-found: warn` lets that step pass having uploaded nothing. The full evidence table is in `audit.md` under *CI verification*.
 
-- **`ci.yml` itself has still never run.** The dispatch exercises `ci-on-demand.yml` only. They share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it — and under the #30 decision that is the intended route, so it stays unproven until a PR is opened.
-- **The run opened finding #31, now fixed in round 11.** 14 `EBADENGINE` warnings — the ESLint 10 tree, `yargs@18`, `undici@7` and `cheerio`, carrying three distinct requirements whose binding constraint is `^20.19.0` — against `.nvmrc`'s `20.17.0`. #18 and #23 had landed in the same pass and disagreed. `.nvmrc` is now `20.19.0` and a second dispatch ([run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334)) confirmed the count dropped 14 → 0 with the suite still green.
+**Three things to carry forward:**
 
-  **Note for any future Node bump: it cannot be verified locally.** This machine runs Node 24, where every range already passes, so the warnings do not reproduce here at all. The count has to be read out of a CI install log.
+- **`ci.yml` itself has still never run.** Both dispatches exercise `ci-on-demand.yml` only. The two share the checkout / setup / install / typecheck / lint prefix, so most of the risk is retired, but `ci.yml`'s own Test step and artifact upload are unproven. Only a PR to `main` triggers it — which under the #30 decision is the intended route, so it stays unproven until a PR exists.
+- **A Node version bump cannot be verified on this machine.** Local is Node 24, where every engine range already passes, so `EBADENGINE` warnings do not reproduce here at all. A clean local install looks like evidence and is worth nothing; the count has to be read out of a CI install log. This is how #31 was verified.
+- **Two annotations appear on every run and are not ours to fix yet.** `actions/checkout@v4`, `setup-node@v4` and `upload-artifact@v4` target Node 20 and are being force-run on Node 24 — bump them to `@v5` when convenient. Separately, `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
 
 ---
 
-## The oldest open finding: #29
+## The only open finding: #29
 
 ### A worker process crashes during startup
 
@@ -128,7 +132,7 @@ The crashed worker's log stops after `Using Chromedriver … from cache director
 
 **Beware the statistics.** At a 1-in-40 base rate, a clean 40-run batch is weak evidence — roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix. Interpret accordingly.
 
-**Related loose end:** the `retried 2x` anomaly against a retry budget of 1 has reproduced in both captures. It correlates with the crash path rather than appearing at random, so it is a lead rather than the arithmetic puzzle it first looked like.
+**Related loose end:** the `retried 2x` anomaly against a retry budget of 1 has reproduced in all three captures. It correlates with the crash path rather than appearing at random, so it is a lead rather than the arithmetic puzzle it first looked like.
 
 ---
 
@@ -170,10 +174,11 @@ All of that is now wrong. It is a persona/instructions file rather than project 
 
 ## Integration status
 
-The branch is **pushed** to `origin` (`github.com/Lighting-Sun/wdio-framework`) at `eb2c939`, matching local HEAD. It is **not merged** and there is **no pull request**. The owner chose "keep the branch as-is" when offered merge / PR / keep; the pushes happened afterwards and do not change that.
+The branch is **pushed** to `origin` (`github.com/Lighting-Sun/wdio-framework`), in sync with local HEAD. It is **not merged** and there is **no pull request**. The owner chose "keep the branch as-is" when offered merge / PR / keep, and pushing has not changed that.
 
-**Ask before merging or opening a PR.** That decision is theirs.
+**Pushing this branch is routine; merging or opening a PR is not.** Ask before either.
 
-Note the overlap with finding #30: opening a PR is also the zero-config way to get `ci.yml` to run for the first time. Raise it as one decision, not two.
+Two things make the PR question worth raising, and they are one decision rather than two:
 
-Worth raising, though: the branch is 27 commits deep and has never been reviewed by anyone but the owner. That is a growing amount of unreviewed work on one line.
+- It is the only way `ci.yml` ever runs — see #30 and the CI status section.
+- The branch is **33 commits** deep and has never been read by anyone but the owner. That is a growing amount of unreviewed work on one line, and it grows every round.
