@@ -30,6 +30,7 @@
 | _(no code change)_ | Round 10 — first CI run on the branch; #30 raised and closed by decision, #31 opened |
 | `b07abcc` | Round 11 — finding #31; verified by a second CI run |
 | `9f18c20` | Round 12 — PR #23 squash-merged to `main`; `ci.yml` run for the first time, on the PR and on `main` |
+| _branch `chore/update-dependencies`_ | Round 13 — Node 24.21.0, WDIO 9.32.0, actions `@v7`; supersedes #31's pin |
 
 **Fixed — 27 findings:** #1, #3, #4, #6–#28 and #31 — that is, everything except the two deferred (#2, #5), the one closed by decision (#30), and the one open (#29).
 
@@ -717,6 +718,8 @@ So 29 commits of work, including a rewrite of both workflow files, sat on the re
 
 ### 31. `.nvmrc` pins a Node version the dependency tree no longer supports ✅ Fixed
 
+> **Round 13 — superseded by the move to Node 24.** `.nvmrc` is now `24.21.0` and `engines.node` `>=24.0.0`, which is the lowest version all 273 dependencies with an engines field accept. It was verified the same way this finding was, but locally: the exact pinned Node was downloaded, and a clean `npm ci` under it produced **0** `EBADENGINE` warnings. The reasoning below still holds; only the version line moved.
+>
 > **Fixed in `b07abcc`.** `.nvmrc` bumped to `20.19.0` and `engines.node` to `>=20.19.0` — the lowest version satisfying every range, and still on the Node 20 LTS line, so nothing else about the setup had to move.
 >
 > **Verified in CI, not by assertion.** A local install would have proved nothing: this machine runs Node 24, where all three ranges already pass, so the warnings cannot reproduce locally at all. Dispatched [run 35844385334](https://github.com/Lighting-Sun/wdio-framework/actions/runs/35844385334) and compared the install log against the previous run's:
@@ -778,6 +781,7 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 | 10 | _(no code change)_ | First CI run on the branch; #30 raised then closed by decision, #31 opened |
 | 11 | `b07abcc` | #31 — Node pin bumped to 20.19.0, verified in CI |
 | 12 | `9f18c20` | PR #23 squash-merged to `main`; `ci.yml` green on the PR and on `main` |
+| 13 | _branch `chore/update-dependencies`_ | Node 24 LTS, dependency updates, actions `@v7`. Not yet run in CI |
 
 **Recommended next:**
 
@@ -787,7 +791,7 @@ Most of that is the ESLint 10 tree that finding #18 introduced — so #18 and #2
 
    Remember the statistics: at a 1-in-40 base rate a clean 40-run batch is weak evidence, roughly what luck produces anyway. A crash *with* a candidate fix applied is strong evidence against that fix.
 
-2. **Bump `actions/checkout`, `actions/setup-node` and `actions/upload-artifact` from `@v4` to `@v5`.** Every run warns that they target Node 20 and are being force-run on Node 24. This isn't an audit finding, just housekeeping, but worth doing before `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19. Check it with a `ci-on-demand.yml` dispatch.
+2. **Run `ci-on-demand.yml` against `chore/update-dependencies`.** Round 13 moved to Node 24.21.0, WDIO 9.32.0 and `actions/*@v7`. All of it was verified locally, on the exact pinned Node, but none of it has run in CI yet. TypeScript 7 is held back until `typescript-eslint` supports it (see HANDOFF, *Round 13*).
 3. **Decide what to do about the code drift found in round 12** (see the #17 status note): URL assertions made with `expect(browser)` in specs, the repeated `browser.waitUntil` in `cart.page.ts`, `browser.options` in `login.page.ts`, and 8 unused read-once getters. Options are to fix them, to promote them to findings here, or to accept them as documented gaps. Until then they stay listed under *Known Gaps* in the architecture doc.
 
 Everything else on this list is closed except the two deferred findings below.

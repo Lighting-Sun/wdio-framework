@@ -1,6 +1,6 @@
 # wdio-framework Architecture
 
-**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
+**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (round 13). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
 
 ## Purpose
 
@@ -228,12 +228,12 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | File | What it configures |
 |------|--------------------|
 | `wdio.conf.ts` | Runner, specs, suites, `maxInstances: 10`, env and browser maps (headless Chrome/Firefox), timeouts, `logLevel`, retries, Spec + Allure reporters, the four lifecycle hooks |
-| `package.json` | Scripts (`test`, `typecheck`, `lint`, `lint:fix`, `format`, `format:check`, Allure), `engines.node >=20.19.0`, ESM |
-| `tsconfig.json` | `strict`, `NodeNext`, `resolveJsonModule`, WDIO and Mocha global types |
+| `package.json` | Scripts (`test`, `typecheck`, `lint`, `lint:fix`, `format`, `format:check`, Allure), `engines.node >=24.0.0`, ESM |
+| `tsconfig.json` | `strict`, `NodeNext`, `resolveJsonModule`; Node (`@types/node` 24), WDIO and Mocha global types |
 | `allure-commandline.d.ts` | Type declaration for the untyped `allure-commandline` package used by `onComplete` |
 | `eslint.config.js` | Flat config: JS + TS recommended, four type-aware rules (`no-floating-promises`, `await-thenable`, `require-await`, `no-shadow`), `eslint-plugin-wdio` on `tests/`, Prettier compatibility last |
 | `.prettierrc` / `.prettierignore` | Formatting for code only. `*.md` and `.github` are excluded on purpose |
-| `.nvmrc` | Node 20.19.0 |
+| `.nvmrc` | Node 24.21.0 (LTS), read by both workflows |
 | `.github/workflows/ci.yml` | PR to `main`, push to `main` (and the dead `continous-integration` branch): typecheck → lint → full suite on QA, Chrome → Allure artifact |
 | `.github/workflows/ci-on-demand.yml` | Manual dispatch: env, browser, optional suite or `smoke` grep; one Test step that builds its own arguments; optional artifact |
 

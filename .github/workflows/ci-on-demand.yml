@@ -41,8 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -75,7 +75,7 @@ jobs:
           echo "Running: npm test -- ${args[*]}"
           npm test -- "${args[@]}"
       - if: github.event.inputs.artifacts == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: allure-report
           path: ./reports/allure/allure-report
