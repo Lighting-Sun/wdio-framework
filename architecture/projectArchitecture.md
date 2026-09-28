@@ -1,6 +1,6 @@
 # wdio-framework Architecture
 
-**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (PR #25). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
+**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (PR #25), and again against `main` at `2c4cbc8` when agent tooling was added. Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
 
 ## Purpose
 
@@ -236,6 +236,8 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `.nvmrc` | Node 24.21.0 (LTS), read by both workflows |
 | `.github/workflows/ci.yml` | PR to `main`, push to `main` (and the dead `continous-integration` branch): typecheck → lint → full suite on QA, Chrome → Allure artifact |
 | `.github/workflows/ci-on-demand.yml` | Manual dispatch: env, browser, optional suite or `smoke` grep; one Test step that builds its own arguments; optional artifact |
+
+**Agent tooling sits outside the layers.** `.claude/skills/` (Claude Code skills, today `refine-ticket`) and `.mcp.json` (the Atlassian MCP server) are used only by Claude Code sessions. Nothing in the suite imports them, and they import nothing from it. `refine-ticket` *reads* the specs, pages, flows, this document and `consulting/.claude.md` to decide what the framework can automate, so drift here now also produces wrong refinements.
 
 ---
 
