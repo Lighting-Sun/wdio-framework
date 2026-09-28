@@ -60,7 +60,7 @@ Then shape the list:
 2. Apply the **layer split** and the **merge rule** (below), so each assertion has exactly one home.
 3. Check each case against the existing tests and give it a status (see **Case shape**). A test only covers a behaviour if it would **fail when that behaviour breaks**. Selecting the sort order the page already shows proves nothing, for example. When an existing test only looks like it covers the case, propose the fix with `[merge into …]` and say what's missing.
 4. **A test must not be able to pass without exercising its behaviour.** When the setup or the data could make it pass vacuously (a sort order already showing, no tied prices, an empty list), add a guard check that fails first and says why, and write it into the case's steps.
-5. **Expected results are literal values from fixture data**, worked out once from the ACs and reviewed in the data file. Never recompute the app's logic in the test: a copied formula can share the app's bug. An assertion on exact text already checks its format, so don't add a separate format check for it. When a ticket's rules combine across screens, propose a decision table: one row per rule or branch plus its boundaries (pairwise when options interact), not every permutation, and flag rows that belong at API or unit level. When values can't be fixed in advance, check relationships between them (sums, ranges, allowed values) instead.
+5. **Expected results of a calculation (tax, totals, discounts) are literal values from fixture data**, worked out once from the ACs and reviewed in the data file. Never recompute the app's formula in the test: a copied formula can share the app's bug. A relationship is different: an order (each item ≤ the next), a sum or a range may be derived from the page's own data, as the sort tests do. An assertion on exact text already checks its format, so don't add a separate format check for it. When a ticket's rules combine across screens, propose a decision table: one row per rule or branch plus its boundaries (pairwise when options interact), not every permutation, and flag rows that belong at API or unit level. When values can't be fixed in advance, check relationships between them (sums, ranges, allowed values) instead.
 6. For every precondition that no existing flow reaches, add a line to **Flows needed**.
 
 Collect **open questions** as you go: an AC that can be read two ways, an expected result the ticket never states (exact message text, sort order, a limit), an edge case nobody decided, a case beyond the ACs. Each question names the AC it came from, and is one the product owner can answer or act on. A known limit nobody can change (the app's data can't exercise a rule) goes in `Not covered here` with its reason, not in the questions.
@@ -81,10 +81,12 @@ Post with `addOrEditJiraIssueComment` as a **new** comment; earlier refinement c
 
 Both layers are built from the same flows (`tests/support/flows.support.ts`) and page-object actions. **A test never depends on another test**: no ordering and no shared state between `it`s. What separates the layers is where the assertions are, not how long the route is.
 
-- **Focused**: one action under test, or one variation of it. Assert its outcome wherever that outcome shows: the element acted on, the header badge, the page the outcome lands on. The steps that set the action up assert nothing (the flows already confirm they arrived), except a guard check against a vacuous pass (step 5). Assertions are hard.
+- **Focused**: one action under test, or one variation of it. Assert its outcome wherever that outcome shows: the element acted on, the header badge, the page the outcome lands on. The steps that set the action up assert nothing (the flows already confirm they arrived), except a guard check against a vacuous pass (step 5).
 - **Journey**: one user goal from start to finish, one `it`. It asserts only what no focused test does: each screen transition (URL and title), that the chosen items carry across screens, and the final screen. It never re-checks a screen's details (calculations, formats, messages). A negative path ends somewhere else, so it is a separate journey or a focused case, never part of the happy one.
 
 **Merge rule (focused):** cases with the same setup that assert on the same screen become one test. Keep them separate only when their setup differs, or when one failure would hide a result the reader needs separately.
+
+**Assertions are hard in both layers**, through page methods like the rest of the framework. A journey's checks are transitions, so a failed one makes the rest meaningless anyway. Soft assertions (`expect.soft`) would need factory support and `SoftAssertionService` in `wdio.conf.ts`; propose them only if a journey ever has several independent checks on one screen.
 
 **Flows** end with a hard check that they arrived (the target page's title), so a setup failure reads as a setup failure.
 
@@ -120,10 +122,10 @@ Journey case:
 TC-1  Purchase journey                              [replaces completePurchase.spec.ts: "Should do a successful purchase"]
   Precondition: loginAsStandardUser
   Checkpoints:
-    1. add data.cartProducts → openCart   → [hard] cart lists the added names          (AC-1, AC-2)
-    2. Checkout                           → [hard] "Checkout: Your Information"        (AC-3)
-    3. fill data.personalInfo → Continue  → [soft] "Checkout: Overview"; same names    (AC-4)
-    4. Finish                             → [soft] "Thank you for your order!"         (AC-6)
+    1. add data.cartProducts → openCart   → (openCart confirms "Your Cart")            (AC-1, AC-2)
+    2. Checkout                           → "Checkout: Your Information"               (AC-3)
+    3. fill data.personalInfo → Continue  → "Checkout: Overview"; the added names      (AC-4)
+    4. Finish                             → "Thank you for your order!"                (AC-6)
   Suggested home: completePurchase.spec.ts   @journey   @smoke: yes
 ```
 
@@ -134,7 +136,7 @@ TC-1  Purchase journey                              [replaces completePurchase.s
   - `[replaces <spec>: "<it title>", …]`: this case absorbs those tests, which are deleted when it is implemented.
 - **Covers**: one or more AC labels (focused). A journey names the AC on each checkpoint instead. This is what lets a reviewer spot an AC with no case.
 - **Precondition**: name an existing flow (`loginAsStandardUser`, `openCart`) or one from **Flows needed**. When the case's subject *is* the precondition (logging in), it drives the page directly, as the framework's fixture rule requires.
-- **Expected** / checkpoint result: a concrete, assertable outcome. When the ticket doesn't state it, write the best reading and raise an open question. In a journey, mark each `[hard]` when later checkpoints are meaningless without it (the next screen was never reached), otherwise `[soft]` (`expect.soft`; it only takes WDIO matchers like `toHaveText` and `toHaveUrl`).
+- **Expected** / checkpoint result: a concrete, assertable outcome. When the ticket doesn't state it, write the best reading and raise an open question.
 - **Suggested home**: see **Homes** above.
 - **@smoke**: `yes` only for a case that guards a core path (login, add to cart, checkout). A journey or a focused case can carry it.
 
