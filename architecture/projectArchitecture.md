@@ -237,7 +237,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `.github/workflows/ci.yml` | PR to `main`, push to `main` (and the dead `continous-integration` branch): typecheck → lint → full suite on QA, Chrome → Allure artifact |
 | `.github/workflows/ci-on-demand.yml` | Manual dispatch: env, browser, optional suite or `smoke` grep; one Test step that builds its own arguments; optional artifact |
 
-**Agent tooling sits outside the layers.** `.claude/skills/` (Claude Code skills, today `refine-ticket`) and `.mcp.json` (the Atlassian MCP server) are used only by Claude Code sessions. Nothing in the suite imports them, and they import nothing from it. `refine-ticket` *reads* the specs, pages, flows, this document and `consulting/.claude.md` to decide what the framework can automate, so drift here now also produces wrong refinements.
+**Agent tooling sits outside the layers.** `.claude/skills/` (Claude Code skills, today `refine-ticket` and `automate-ticket`) and `.mcp.json` (the Atlassian and Playwright MCP servers) are used only by Claude Code sessions. Nothing in the suite imports them, and they import nothing from it. `refine-ticket` *reads* the specs, pages, flows, this document and `consulting/.claude.md` to decide what the framework can automate. `automate-ticket` implements a refinement under the same rules and updates this document's inventories as it goes. Drift here now produces wrong refinements, and code written to wrong rules.
 
 ---
 
