@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Turn one Jira Cloud ticket into a **refinement**: the UI test cases this framework can automate, the flows they need, the open questions the ticket leaves unanswered, and a count of what falls outside the framework. The owner reviews the draft in this session; it reaches Jira only on their explicit approval.
 
-This is phase 1: cases only. Generating specs or page objects, and exploring the live app, are out of scope here. A refinement may *propose* changes to existing tests (merges, replacements, renames); whoever implements the ticket makes them.
+This is phase 1: cases only. Generating specs or page objects, and exploring the live app, are phase 2 (`/automate-ticket`), which implements the latest refinement exactly as posted. Write each case so it can be implemented without asking. A refinement may *propose* changes to existing tests (merges, replacements, renames); whoever implements the ticket makes them.
 
 Jira access is the Atlassian MCP server in `.mcp.json` (tool names below are from Atlassian's docs; if one differs, use the equivalent the server lists).
 
@@ -75,7 +75,11 @@ Then stop and ask the owner to approve, edit, or cancel. Apply edits and show th
 
 ### 7. Post
 
-Post with `addOrEditJiraIssueComment` as a **new** comment; earlier refinement comments stay untouched as history. If the body format is unclear, call `getContentFormatGuide` first. Report the ticket URL back to the owner. Take any counts in that report (cases per status, open questions) from the posted body, by counting its status tags and `Q` lines, never from memory of an earlier draft.
+Post with `addOrEditJiraIssueComment` as a **new** comment; earlier refinement comments stay untouched as history. If the body format is unclear, call `getContentFormatGuide` first.
+
+Then, if the ticket is in To Do (`Tareas por hacer` on this site), move it to **Ready For Automation**, which is where `/automate-ticket` picks it up. Get the transitions with `listJiraIssueTransitions` (through `executeRead`), pick the one whose target status is Ready For Automation, and apply it with `transitionJiraIssue`. The approval to post covers this move. Leave a ticket in any other status where it is, and say so in the report.
+
+Report the ticket URL and its status back to the owner. Take any counts in that report (cases per status, open questions) from the posted body, by counting its status tags and `Q` lines, never from memory of an earlier draft.
 
 ## Layers
 
