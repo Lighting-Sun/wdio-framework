@@ -218,6 +218,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - `onPrepare` wipes `reports/allure` before each run. `afterTest` attaches a screenshot on failure; **keep its `await`**. `onComplete` generates the HTML report with a 60 s ceiling.
 - `specFileRetries: 1`, deferred. `onWorkerEnd` names any spec that used a retry. Its `retries` argument is the budget **remaining**, so the test is `SPEC_FILE_RETRIES - retries > 0`. Reading it the other way flags every green spec as flaky.
 - `logLevel` defaults to `error` and is raised by `WDIO_LOG_LEVEL` (CI sets `info`) without a code change.
+- Browsers run headless. `HEADED=1` drops the headless flag for a local run you want to watch; it is ignored whenever `CI` is set, so it can't reach a runner with no display.
 - Environment (`--env qa|dev`) and browser (`--browser chrome|firefox`) come from CLI flags, with `qa` and `chrome` as defaults. Unknown values fall back silently to the defaults.
 - A new environment needs an entry in the `environments` map in `wdio.conf.ts` and an option in `ci-on-demand.yml`'s `environment` input.
 - Workflow inputs go through `env:` and are quoted where used, so a future free-text input can't become shell injection.
@@ -228,7 +229,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it configures |
 |------|--------------------|
-| `wdio.conf.ts` | Runner, specs, suites, `maxInstances: 10`, env and browser maps (headless Chrome/Firefox), timeouts, `logLevel`, retries, Spec + Allure reporters, the four lifecycle hooks |
+| `wdio.conf.ts` | Runner, specs, suites, `maxInstances: 10`, env and browser maps (headless Chrome/Firefox; headed on a local run with `HEADED=1`), timeouts, `logLevel`, retries, Spec + Allure reporters, the four lifecycle hooks |
 | `package.json` | Scripts (`test`, `typecheck`, `lint`, `lint:fix`, `format`, `format:check`, Allure), `engines.node >=24.0.0`, ESM |
 | `tsconfig.json` | `strict`, `NodeNext`, `resolveJsonModule`; Node (`@types/node` 24), WDIO and Mocha global types |
 | `allure-commandline.d.ts` | Type declaration for the untyped `allure-commandline` package used by `onComplete` |
