@@ -56,6 +56,23 @@ export default tseslint.config(
         files: ['tests/**/*.ts'],
     },
 
+    {
+        // Element access lives in the two action modules so every interaction
+        // carries its locator description into failure messages and Allure steps.
+        files: ['tests/**/*.ts'],
+        ignores: ['tests/utils/elementActions.utils.ts', 'tests/utils/elementExpectations.utils.ts'],
+        rules: {
+            'no-restricted-globals': [
+                'error',
+                ...['$', '$$'].map((name) => ({
+                    name,
+                    message:
+                        'Use the functions in tests/utils/elementActions.utils.ts or elementExpectations.utils.ts.',
+                })),
+            ],
+        },
+    },
+
     // Must stay last: turns off every rule that would fight Prettier.
     prettier,
 );
