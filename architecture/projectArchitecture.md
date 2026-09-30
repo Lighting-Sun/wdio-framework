@@ -60,12 +60,12 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - Smoke tests carry `@smoke` in the `it()` title. That is how CI's grep finds them.
 - No randomized data. A failure has to be reproducible from the test name alone.
 
-**Inventory:** 4 spec files, 11 tests, about 6 s for a full local run.
+**Inventory:** 4 spec files, 12 tests, about 6 s for a full local run.
 
 | File | Tests | What it covers |
 |------|------:|----------------|
 | `tests/specs/login.spec.ts` | 3 | Valid login `@smoke`, locked-out error message, logout through the side menu `@smoke` |
-| `tests/specs/addProductsToCart.spec.ts` | 3 | Adding a fixed product list, one specific product `@smoke`, removing every item |
+| `tests/specs/cart.spec.ts` | 4 | Adding a fixed product list and one specific product `@smoke` (cart badge count, the card's Remove button); removing one product then every product from the cart (badge updates, then disappears); removing a product from the inventory page |
 | `tests/specs/completePurchase.spec.ts` | 1 | End to end: login → add → cart → checkout form → overview (names, prices, subtotal) → confirmation |
 | `tests/specs/filter.spec.ts` | 4 | All four sort options (`lohi`, `hilo`, `az`, `za`), data-driven from one scenario table |
 
@@ -115,8 +115,8 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 |------|--------------|
 | `tests/pages/page.ts` | Base class: creates `WdioFactoryUtils`, provides `open(path)` |
 | `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
-| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions; dynamic per-product name, price and add-to-cart locators; `addItemsToCartByNames()`; owns `Header` |
-| `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeAllItemsFromCart()`, checkout button; owns `Header` |
+| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions; dynamic per-product name, price, add-to-cart and remove locators; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
+| `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeItemFromCartByName()`, `removeAllItemsFromCart()`, checkout button; owns `Header` |
 | `tests/pages/checkout.page.ts` | First name, last name, postal code, continue; `fillPersonalInformationForm()`; owns `Header` |
 | `tests/pages/overview.page.ts` | Item names and prices with retrying assertions, numeric prices, **subtotal** (no tax or total), finish button; owns `Header` |
 | `tests/pages/complete.page.ts` | Confirmation header with a retrying assertion; owns `Header` |
@@ -141,7 +141,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | File | What it owns |
 |------|--------------|
 | `tests/components/base.component.ts` | Base class: creates `WdioFactoryUtils` |
-| `tests/components/header.component.ts` | Burger menu button, cart button, page title with `expectPageTitle()`, sort dropdown; owns `SideMenu` |
+| `tests/components/header.component.ts` | Burger menu button, cart button, cart badge with `expectCartBadgeCount()` / `expectNoCartBadge()`, page title with `expectPageTitle()`, sort dropdown; owns `SideMenu` |
 | `tests/components/sidemenu.component.ts` | Dynamic `${value}-sidebar-link` locator; `clickOnSideMenuOptionByValue()` |
 
 **Tradeoff:** the sort dropdown lives on `Header` even though only the inventory page shows it. That keeps one header model, but `cartPage.header.clickOnSortFilterDropdownOption()` type-checks and then times out. Put new inventory-only controls on `inventory.page.ts`, not on `Header`.
@@ -171,6 +171,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `getElements(elements)` | All matches as an array. **Its `await` is load-bearing;** see below |
 | `getTextFromElements(elements)` | Text of every match, read once |
 | `expectText(element, expected)` | Retrying assertion on one element's text |
+| `expectNotExisting(element)` | Retrying assertion that nothing matches the locator |
 | `expectEventuallyEquals(label, readValues, expected)` | Re-reads a collected list until it matches (10 s), then asserts once more for a readable diff |
 | `expectTextsFromElements(elements, expected)` | `expectEventuallyEquals` over a locator's texts |
 | `selectOptionFromSelect(element, attr, value)` | Waits for displayed, selects by attribute |
@@ -200,7 +201,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | File | What it provides |
 |------|------------------|
 | `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
-| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, checkout `personalInfo` |
+| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo` |
 
 **Tradeoff:** one data file is simple, but it can't hold per-environment values. It will need splitting when environments diverge.
 

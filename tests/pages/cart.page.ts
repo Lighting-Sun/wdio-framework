@@ -1,4 +1,5 @@
 import Header from '../components/header.component.js';
+import UtilsMethods from '../utils/utilsMethods.utils.js';
 import Page from './page.js';
 
 class CartPage extends Page {
@@ -16,6 +17,10 @@ class CartPage extends Page {
         itemCartRemoveButton: {
             selector: "button[data-test^='remove']",
             description: 'item remove from cart button',
+        },
+        itemCartRemoveButtonByName: {
+            selector: "button[data-test='remove-${value}']",
+            description: "remove button in cart for '${value}'",
         },
         checkoutButton: {
             selector: "button[data-test='checkout']",
@@ -48,6 +53,14 @@ class CartPage extends Page {
             },
             { timeoutMsg: `💥 ${this.locators.itemCartRemoveButton.description} was found!, none should be existent` },
         );
+    }
+
+    async removeItemFromCartByName(value: string): Promise<void> {
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.itemCartRemoveButtonByName,
+            UtilsMethods.toProductSlug(value),
+        );
+        await this.wdioFactory.click(selector);
     }
 
     async clickOnCheckoutButton(): Promise<void> {

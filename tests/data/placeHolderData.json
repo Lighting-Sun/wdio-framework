@@ -12,6 +12,10 @@
     "loginErrorMessage": "Epic sadface: Sorry, this user has been locked out.",
     "cartProducts": ["Sauce Labs Backpack", "Sauce Labs Bike Light", "Sauce Labs Onesie"],
     "singleCartProduct": "Sauce Labs Onesie",
+    "cartButtonLabels": {
+        "addToCart": "Add to cart",
+        "remove": "Remove"
+    },
     "personalInfo": {
         "firstName": "Tester",
         "lastName": "SDET",
