@@ -1,3 +1,9 @@
+/** One product as the inventory grid shows it; `price` has its `$` stripped. */
+export interface ListedProduct {
+    name: string;
+    price: string;
+}
+
 class UtilsMethods {
     /**
      * The four sort helpers below all return a sorted COPY.
@@ -23,6 +29,23 @@ class UtilsMethods {
 
     static sortTextZToA(values: string[]): string[] {
         return [...values].sort((a, b) => b.localeCompare(a));
+    }
+
+    /**
+     * The order both price sorts should produce: by price in the given
+     * direction, and products with the same price by name, A to Z. Sorting
+     * prices alone can't tell two tied products apart.
+     */
+    static sortByPriceThenName(products: ListedProduct[], priceOrder: 'lowToHigh' | 'highToLow'): ListedProduct[] {
+        const direction = priceOrder === 'lowToHigh' ? 1 : -1;
+        return [...products].sort(
+            (a, b) => direction * (Number(a.price) - Number(b.price)) || a.name.localeCompare(b.name),
+        );
+    }
+
+    /** Each value that appears more than once, listed once. */
+    static findSharedValues(values: string[]): string[] {
+        return [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
     }
 
     /**
