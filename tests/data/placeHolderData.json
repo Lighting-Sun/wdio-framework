@@ -21,6 +21,21 @@
         "lastName": "SDET",
         "postalCode": "1223"
     },
+    "whitespaceInfo": {
+        "firstName": " ",
+        "lastName": " ",
+        "postalCode": " "
+    },
+    "checkoutPlaceholders": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "postalCode": "Zip/Postal Code"
+    },
+    "checkoutErrors": {
+        "firstName": "Error: First Name is required",
+        "lastName": "Error: Last Name is required",
+        "postalCode": "Error: Postal Code is required"
+    },
     "priceFormat": "^\\$\\d+\\.\\d{2}$",
     "expectedOverview": {
         "itemTotal": "Item total: $47.97",

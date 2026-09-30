@@ -60,13 +60,14 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - Smoke tests carry `@smoke` in the `it()` title. That is how CI's grep finds them.
 - No randomized data. A failure has to be reproducible from the test name alone.
 
-**Inventory:** 5 spec files, 15 tests, about 6 s for a full local run.
+**Inventory:** 6 spec files, 22 tests, about 6 s for a full local run.
 
 | File | Tests | What it covers |
 |------|------:|----------------|
 | `tests/specs/login.spec.ts` | 3 | Valid login `@smoke`, locked-out error message, logout through the side menu `@smoke` |
 | `tests/specs/cart.spec.ts` | 5 | Adding a fixed product list and one specific product `@smoke` (cart badge count, the card's Remove button); removing one product then every product from the cart (badge updates, then disappears); removing a product from the inventory page; the cart is empty (no rows, no badge) when nothing was added |
 | `tests/specs/completePurchase.spec.ts` | 1 | Purchase journey `@journey @smoke`: login → add → cart → checkout form → overview (product names carry through) → confirmation, asserting each transition (URL and title). Prices and totals are left to `overview.spec.ts` |
+| `tests/specs/checkout.spec.ts` | 7 | The checkout information form, from an empty cart: the three inputs' placeholders (`checkoutPlaceholders`); a missing First Name, Last Name or Postal Code blocks Continue with that field's error (`checkoutErrors`); with several empty, only the first in form order is named; fields of only spaces count as filled and reach the overview; Checkout is reachable with an empty cart (guarded by no rows and no badge) |
 | `tests/specs/overview.spec.ts` | 1 | The checkout overview, reached with `reachOverview`: each row's name, description and price equal what the inventory showed, and Item total, Tax (8%, rounded up to the cent) and Total equal the literal `expectedOverview` fixture values |
 | `tests/specs/inventorySort.spec.ts` | 5 | All four sort options (`az`, `za`, `lohi`, `hilo`): the page opens A to Z (and `az` is checked after moving to `za`), both price sorts break ties by name A to Z (guarded by a shared price existing), every inventory price shows exactly 2 decimals (checked in the low-to-high test), and the sort resets to A to Z after going to the cart and back through the side menu's All Items |
 
@@ -89,7 +90,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it provides |
 |------|------------------|
-| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()`, `reachOverview(productNames)` (adds the products, goes through checkout to the overview, and returns each product's name, price and description as the inventory showed them): preconditions that assert they arrived |
+| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()`, `openCheckoutInformation()` (cart → Checkout), `reachOverview(productNames)` (adds the products, goes through checkout to the overview, and returns each product's name, price and description as the inventory showed them): preconditions that assert they arrived. `expectOnCheckoutInformation()` and `expectOnOverview()` are those arrival checks (URL and title), also used by specs that assert where an action left them, so no new `expect(browser)` goes into a spec |
 | `tests/support/session.support.ts` | `resetBrowserState()`: deletes cookies, clears session and local storage, refreshes |
 | `tests/support/credentials.support.ts` | `validUser`, `lockedOutUser`: `SAUCE_USERNAME` / `SAUCE_PASSWORD` and the `SAUCE_LOCKED_OUT_` pair, with JSON fallback |
 
@@ -118,7 +119,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
 | `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions, and `getProducts()` pairing them; dynamic per-product name, price, add-to-cart and remove locators; a dynamic per-product description locator (`getInventoryItemDescriptionByNameText()`); `expectEveryPriceToMatch()` for the price format; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
 | `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeItemFromCartByName()`, `removeAllItemsFromCart()`, checkout button; owns `Header` |
-| `tests/pages/checkout.page.ts` | First name, last name, postal code, continue; `fillPersonalInformationForm()`; owns `Header` |
+| `tests/pages/checkout.page.ts` | First name, last name, postal code, continue, error message; `fillPersonalInformationForm()`; `expectErrorMessage()`, `expectPlaceholders()` (the three inputs' placeholders as one retrying list); owns `Header` |
 | `tests/pages/overview.page.ts` | Item names, descriptions and prices with retrying assertions, numeric prices, subtotal, tax and total labels with retrying text assertions (`expectSubTotalText`, `expectTaxText`, `expectTotalText`), finish button; owns `Header` |
 | `tests/pages/complete.page.ts` | Confirmation header with a retrying assertion; owns `Header` |
 
@@ -156,7 +157,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 **Rules:**
 
 - `$()` and `$$()` appear in this file and nowhere else.
-- **Every method that acts or asserts logs an Allure step**, and every step is awaited: `addStep` and `addAttachment` return promises. The pure or read-only helpers (`getSelectorByValue`, `getElements`, `getTextFromElements`) deliberately log nothing.
+- **Every method that acts or asserts logs an Allure step**, and every step is awaited: `addStep` and `addAttachment` return promises. The pure or read-only helpers (`getSelectorByValue`, `getAttribute`, `getElements`, `getTextFromElements`) deliberately log nothing.
 - Don't call Allure from pages, components or specs. If more context is needed, extend this class.
 - **Assertions assert on the element, not on a resolved string**, so `expect-webdriverio` retries. `expect(await getText()).toEqual(x)` checks once and races the page.
 - Waits are bounded. Nothing in this file loops without a ceiling.
@@ -169,6 +170,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `click(element)` | Waits for clickable, clicks, logs |
 | `setValue(element, value)` | Waits for enabled, sets the value (no implicit click), logs |
 | `getText(element)` | Waits for displayed, returns text, logs |
+| `getAttribute(element, attribute)` | One attribute of one element, read once (null if absent); feeds `expectEventuallyEquals` |
 | `getElements(elements)` | All matches as an array. **Its `await` is load-bearing;** see below |
 | `getTextFromElements(elements)` | Text of every match, read once |
 | `expectText(element, expected)` | Retrying assertion on one element's text |
@@ -203,7 +205,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | File | What it provides |
 |------|------------------|
 | `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `sortByPriceThenName` (price, then name A to Z for ties), `findSharedValues`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
-| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo`, `priceFormat` (the displayed price pattern), `expectedOverview` (item total, tax and total for `cartProducts`), `orderConfirmation` |
+| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo`, `whitespaceInfo` (single spaces), `checkoutPlaceholders`, `checkoutErrors`, `priceFormat` (the displayed price pattern), `expectedOverview` (item total, tax and total for `cartProducts`), `orderConfirmation` |
 
 **Tradeoff:** one data file is simple, but it can't hold per-environment values. It will need splitting when environments diverge.
 

@@ -21,7 +21,29 @@ class CheckoutPage extends Page {
             selector: '#continue',
             description: 'continue button',
         },
+        errorMessage: {
+            selector: "h3[data-test='error']",
+            description: 'checkout information error message',
+        },
     };
+
+    async expectErrorMessage(expectedMessage: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.errorMessage, expectedMessage);
+    }
+
+    /**
+     * Retrying check of the three inputs' placeholders, in form order (first
+     * name, last name, postal code), compared as one list so a failure shows
+     * every mismatch at once. A missing input reads as a failed comparison.
+     */
+    async expectPlaceholders(expectedPlaceholders: string[]): Promise<void> {
+        const inputs = [this.locators.firstNameInput, this.locators.lastNameInput, this.locators.postalCodeInput];
+        await this.wdioFactory.expectEventuallyEquals(
+            'checkout information input placeholders',
+            () => Promise.all(inputs.map((input) => this.wdioFactory.getAttribute(input, 'placeholder'))),
+            expectedPlaceholders,
+        );
+    }
 
     async fillFirstName(firstName: string): Promise<void> {
         await this.wdioFactory.setValue(this.locators.firstNameInput, firstName);

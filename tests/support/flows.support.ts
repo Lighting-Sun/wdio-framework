@@ -37,6 +37,24 @@ export async function openCart(): Promise<void> {
     await cartPage.header.expectPageTitle('Your Cart');
 }
 
+/** Confirms the checkout information page is showing (URL and title). */
+export async function expectOnCheckoutInformation(): Promise<void> {
+    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
+    await checkoutPage.header.expectPageTitle('Checkout: Your Information');
+}
+
+/** Confirms the checkout overview page is showing (URL and title). */
+export async function expectOnOverview(): Promise<void> {
+    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
+    await overviewPage.header.expectPageTitle('Checkout: Overview');
+}
+
+/** From the cart: selects Checkout and confirms the checkout information page is showing. */
+export async function openCheckoutInformation(): Promise<void> {
+    await cartPage.clickOnCheckoutButton();
+    await expectOnCheckoutInformation();
+}
+
 /**
  * From the inventory page: adds the products, then goes cart → Checkout → fills
  * the checkout form → Continue, and confirms the overview page is showing.
@@ -51,15 +69,13 @@ export async function reachOverview(productNames: string[]): Promise<InventoryPr
         products.push({ name: itemName, price: itemPrice, description });
     }
     await openCart();
-    await cartPage.clickOnCheckoutButton();
-    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
+    await openCheckoutInformation();
     await checkoutPage.fillPersonalInformationForm(
         data.personalInfo.firstName,
         data.personalInfo.lastName,
         data.personalInfo.postalCode,
     );
     await checkoutPage.clickContinueButton();
-    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
-    await overviewPage.header.expectPageTitle('Checkout: Overview');
+    await expectOnOverview();
     return products;
 }

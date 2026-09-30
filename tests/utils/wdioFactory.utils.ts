@@ -81,6 +81,15 @@ export default class WdioFactoryUtils {
         return textFromElement;
     }
 
+    /**
+     * One attribute of one element, read once, or null when the element has
+     * no such attribute. Logs nothing: it is meant to feed a retrying
+     * `expectEventuallyEquals`, which would otherwise log every re-read.
+     */
+    async getAttribute(element: Locator, attribute: string): Promise<string | null> {
+        return await $(element.selector).getAttribute(attribute);
+    }
+
     async getElements(elements: Locator): Promise<WebdriverIO.Element[]> {
         /**
          * The `await` is load-bearing and the rule below is a false positive.
