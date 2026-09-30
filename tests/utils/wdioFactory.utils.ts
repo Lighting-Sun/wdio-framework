@@ -162,6 +162,34 @@ export default class WdioFactoryUtils {
         );
     }
 
+    /**
+     * Retrying assertion that every element's text matches `pattern`. It fails
+     * on an empty match too: with no elements, "every text matches" would pass
+     * having checked nothing. On failure, the diff lists the texts that don't
+     * match.
+     */
+    async expectEveryTextToMatch(elements: Locator, pattern: RegExp): Promise<void> {
+        const mismatches = (texts: string[]): string[] => texts.filter((text) => !pattern.test(text));
+        let actualTexts: string[] = [];
+
+        await browser
+            .waitUntil(
+                async () => {
+                    actualTexts = await this.getTextFromElements(elements);
+                    return actualTexts.length > 0 && mismatches(actualTexts).length === 0;
+                },
+                {
+                    timeout: TEXTS_RETRY_TIMEOUT,
+                    timeoutMsg: `❌ ${elements.description} never all matched ${String(pattern)}.`,
+                },
+            )
+            .catch(() => undefined);
+
+        expect(actualTexts).not.toHaveLength(0);
+        expect(mismatches(actualTexts)).toEqual([]);
+        await allureReporter.addStep(`✅ all ${actualTexts.length} ${elements.description} match ${String(pattern)}`);
+    }
+
     async selectOptionFromSelect(element: Locator, attribute: string, value: string): Promise<void> {
         const elementSelector = $(element.selector);
         const elementDescription = element.description;

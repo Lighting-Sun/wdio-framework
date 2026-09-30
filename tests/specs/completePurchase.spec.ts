@@ -7,22 +7,23 @@ import completePage from '../pages/complete.page.js';
 import { resetBrowserState } from '../support/session.support.js';
 import { loginAsStandardUser, openCart } from '../support/flows.support.js';
 import data from '../data/placeHolderData.json' with { type: 'json' };
-import UtilsMethods from '../utils/utilsMethods.utils.js';
 
+/**
+ * The purchase journey: checks each screen transition and that the chosen
+ * products carry through to the overview. Prices, totals and descriptions are
+ * checked by overview.spec.ts, not here.
+ */
 describe('complete purchase scenarios', () => {
     beforeEach(async () => {
         await loginPage.openPage();
         await resetBrowserState();
     });
 
-    it('Should do a successful purchase', async () => {
+    it('Should complete a purchase from cart to order confirmation @journey @smoke', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
         const inventoryNames = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemName');
-        const inventoryPrices = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemPrice');
         await openCart();
-        await cartPage.expectItemCartNames(inventoryNames);
-        await cartPage.expectItemCartPrices(inventoryPrices);
         await cartPage.clickOnCheckoutButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
         await checkoutPage.header.expectPageTitle('Checkout: Your Information');
@@ -35,13 +36,9 @@ describe('complete purchase scenarios', () => {
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
         await overviewPage.header.expectPageTitle('Checkout: Overview');
         await overviewPage.expectItemOverviewNames(inventoryNames);
-        await overviewPage.expectItemOverviewPrices(inventoryPrices);
-        const overviewSumPrices = UtilsMethods.sumArrAndFixPrecision(await overviewPage.getValuesFromPrices(), 2);
-        const overviewSubTotalPrice = UtilsMethods.fixNumberPrecision(await overviewPage.getSubTotalValue(), 2);
-        expect(overviewSumPrices).toEqual(overviewSubTotalPrice);
         await overviewPage.clickOnFinishButton();
         await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'));
         await completePage.header.expectPageTitle('Checkout: Complete!');
-        await completePage.expectCompletePurchaseText('Thank you for your order!');
+        await completePage.expectCompletePurchaseText(data.orderConfirmation);
     });
 });

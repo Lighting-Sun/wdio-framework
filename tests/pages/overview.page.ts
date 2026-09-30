@@ -17,9 +17,21 @@ class OverviewPage extends Page {
             selector: "div[data-test='inventory-item-price']",
             description: 'overview page item price',
         },
+        overviewItemDescriptions: {
+            selector: "div[data-test='inventory-item-desc']",
+            description: 'overview page item description',
+        },
         subTotalLabel: {
             selector: "div[data-test='subtotal-label']",
             description: 'sub total label',
+        },
+        taxLabel: {
+            selector: "div[data-test='tax-label']",
+            description: 'tax label in the price total summary',
+        },
+        totalLabel: {
+            selector: "div[data-test='total-label']",
+            description: 'total label (item total plus tax) in the price total summary',
         },
     };
 
@@ -42,6 +54,22 @@ class OverviewPage extends Page {
 
     async expectItemOverviewPrices(expectedPrices: string[]): Promise<void> {
         await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemPrices, expectedPrices);
+    }
+
+    async expectItemOverviewDescriptions(expectedDescriptions: string[]): Promise<void> {
+        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemDescriptions, expectedDescriptions);
+    }
+
+    async expectSubTotalText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.subTotalLabel, expectedText);
+    }
+
+    async expectTaxText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.taxLabel, expectedText);
+    }
+
+    async expectTotalText(expectedText: string): Promise<void> {
+        await this.wdioFactory.expectText(this.locators.totalLabel, expectedText);
     }
 
     async getSubTotalValue(): Promise<number> {

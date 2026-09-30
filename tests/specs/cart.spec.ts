@@ -56,4 +56,13 @@ describe('product purchase scenarios', () => {
         await openCart();
         await cartPage.expectItemCartNames(cartProductsWithoutSingle);
     });
+
+    it('Should show an empty cart when nothing was added', async () => {
+        await loginAsStandardUser();
+        await openCart();
+        // openCart has confirmed "Your Cart", and this is the row locator the tests
+        // above see populated, so no rows means an empty cart, not a dead locator.
+        await cartPage.expectItemCartNames([]);
+        await cartPage.header.expectNoCartBadge();
+    });
 });

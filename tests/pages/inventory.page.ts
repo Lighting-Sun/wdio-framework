@@ -26,6 +26,11 @@ class Inventory extends Page {
                 "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-price']",
             description: "inventory item price for '${value}'",
         },
+        inventoryItemDescriptionByName: {
+            selector:
+                "div[data-test='inventory-item']:has(button[data-test$='-${value}']) div[data-test='inventory-item-desc']",
+            description: "inventory item description for '${value}'",
+        },
         inventoryAddToCartButtonByName: {
             selector: "button[data-test='add-to-cart-${value}']",
             description: "add to cart button for '${value}'",
@@ -69,6 +74,11 @@ class Inventory extends Page {
         );
     }
 
+    /** Retrying check that every price in the grid, as displayed with its `$`, matches `pattern`. */
+    async expectEveryPriceToMatch(pattern: RegExp): Promise<void> {
+        await this.wdioFactory.expectEveryTextToMatch(this.locators.inventoryItemPrice, pattern);
+    }
+
     /** Every product's name and price, in the order the grid shows them. Reads once. */
     async getProducts(): Promise<ListedProduct[]> {
         const names = await this.getTextFromNames();
@@ -104,6 +114,14 @@ class Inventory extends Page {
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
         const selector = this.wdioFactory.getSelectorByValue(
             this.locators.inventoryItemPriceByName,
+            UtilsMethods.toProductSlug(value),
+        );
+        return await this.wdioFactory.getText(selector);
+    }
+
+    async getInventoryItemDescriptionByNameText(value: string): Promise<string> {
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryItemDescriptionByName,
             UtilsMethods.toProductSlug(value),
         );
         return await this.wdioFactory.getText(selector);
