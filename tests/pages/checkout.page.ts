@@ -1,4 +1,6 @@
 import Header from '../components/header.component.js';
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
 import Page from './page.js';
 
 class CheckoutPage extends Page {
@@ -28,7 +30,7 @@ class CheckoutPage extends Page {
     };
 
     async expectErrorMessage(expectedMessage: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.errorMessage, expectedMessage);
+        await expectations.expectText(this.locators.errorMessage, expectedMessage);
     }
 
     /**
@@ -38,27 +40,27 @@ class CheckoutPage extends Page {
      */
     async expectPlaceholders(expectedPlaceholders: string[]): Promise<void> {
         const inputs = [this.locators.firstNameInput, this.locators.lastNameInput, this.locators.postalCodeInput];
-        await this.wdioFactory.expectEventuallyEquals(
+        await expectations.expectEventuallyEquals(
             'checkout information input placeholders',
-            () => Promise.all(inputs.map((input) => this.wdioFactory.getAttribute(input, 'placeholder'))),
+            () => Promise.all(inputs.map((input) => actions.getAttribute(input, 'placeholder'))),
             expectedPlaceholders,
         );
     }
 
     async fillFirstName(firstName: string): Promise<void> {
-        await this.wdioFactory.setValue(this.locators.firstNameInput, firstName);
+        await actions.setValue(this.locators.firstNameInput, firstName);
     }
 
     async fillLastName(lastName: string): Promise<void> {
-        await this.wdioFactory.setValue(this.locators.lastNameInput, lastName);
+        await actions.setValue(this.locators.lastNameInput, lastName);
     }
 
     async fillPostalCode(postalCode: string): Promise<void> {
-        await this.wdioFactory.setValue(this.locators.postalCodeInput, postalCode);
+        await actions.setValue(this.locators.postalCodeInput, postalCode);
     }
 
     async clickContinueButton(): Promise<void> {
-        await this.wdioFactory.click(this.locators.continueButton);
+        await actions.click(this.locators.continueButton);
     }
 
     async fillPersonalInformationForm(firstName: string, lastName: string, postalCode: string): Promise<void> {

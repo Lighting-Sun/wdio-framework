@@ -1,4 +1,6 @@
 import Header from '../components/header.component.js';
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
 import Page from './page.js';
 
 class OverviewPage extends Page {
@@ -36,49 +38,49 @@ class OverviewPage extends Page {
     };
 
     async getValuesFromPrices(): Promise<number[]> {
-        const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);
+        const textFromPrices = await actions.getTextFromElements(this.locators.overviewItemPrices);
         return textFromPrices.map((textToTrim) => textToTrim.slice(1)).map(Number);
     }
 
     async getTextFromPrices(): Promise<string[]> {
-        return await this.wdioFactory.getTextFromElements(this.locators.overviewItemPrices);
+        return await actions.getTextFromElements(this.locators.overviewItemPrices);
     }
 
     async getItemOverviewNames(): Promise<string[]> {
-        return await this.wdioFactory.getTextFromElements(this.locators.overviewItemNames);
+        return await actions.getTextFromElements(this.locators.overviewItemNames);
     }
 
     async expectItemOverviewNames(expectedNames: string[]): Promise<void> {
-        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemNames, expectedNames);
+        await expectations.expectTextsFromElements(this.locators.overviewItemNames, expectedNames);
     }
 
     async expectItemOverviewPrices(expectedPrices: string[]): Promise<void> {
-        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemPrices, expectedPrices);
+        await expectations.expectTextsFromElements(this.locators.overviewItemPrices, expectedPrices);
     }
 
     async expectItemOverviewDescriptions(expectedDescriptions: string[]): Promise<void> {
-        await this.wdioFactory.expectTextsFromElements(this.locators.overviewItemDescriptions, expectedDescriptions);
+        await expectations.expectTextsFromElements(this.locators.overviewItemDescriptions, expectedDescriptions);
     }
 
     async expectSubTotalText(expectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.subTotalLabel, expectedText);
+        await expectations.expectText(this.locators.subTotalLabel, expectedText);
     }
 
     async expectTaxText(expectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.taxLabel, expectedText);
+        await expectations.expectText(this.locators.taxLabel, expectedText);
     }
 
     async expectTotalText(expectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.totalLabel, expectedText);
+        await expectations.expectText(this.locators.totalLabel, expectedText);
     }
 
     async getSubTotalValue(): Promise<number> {
-        const subTotalText = (await this.wdioFactory.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
+        const subTotalText = (await actions.getText(this.locators.subTotalLabel)).replace('Item total: $', '');
         return Number(subTotalText);
     }
 
     async clickOnFinishButton(): Promise<void> {
-        await this.wdioFactory.click(this.locators.finishButton);
+        await actions.click(this.locators.finishButton);
     }
 }
 
