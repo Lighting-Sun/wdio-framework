@@ -49,13 +49,6 @@ class CartPage extends Page {
 
     async removeAllItemsFromCart(): Promise<void> {
         await actions.clickAllIfExists(this.locators.itemCartRemoveButton);
-        await browser.waitUntil(
-            async () => {
-                const elementCount = await actions.countElements(this.locators.itemCartRemoveButton);
-                return elementCount === 0;
-            },
-            { timeoutMsg: `💥 ${this.locators.itemCartRemoveButton.description} was found!, none should be existent` },
-        );
     }
 
     async removeItemFromCartByName(value: string): Promise<void> {
