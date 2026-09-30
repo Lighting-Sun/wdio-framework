@@ -39,6 +39,12 @@ const browserCap: Record<string, object> = {
 
 const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
 
+/** Where an `@KAN-123` tag in a test title links to in the Allure report. */
+const JIRA_ISSUE_URL_TEMPLATE = 'https://harveydavid14.atlassian.net/browse/{}';
+
+/** `@KAN-123`-style tags name the Jira ticket a test was written from. */
+const JIRA_KEY_TAG = /^[A-Z][A-Z0-9]+-\d+$/;
+
 /** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
 const SPEC_FILE_RETRIES = 1;
 
@@ -92,6 +98,7 @@ export const config: WebdriverIO.Config = {
                 outputDir: allureDir + '/allure-results',
                 disableWebdriverStepsReporting: true,
                 disableWebdriverScreenshotsReporting: true,
+                issueLinkTemplate: JIRA_ISSUE_URL_TEMPLATE,
             },
         ],
     ],
@@ -130,6 +137,26 @@ export const config: WebdriverIO.Config = {
             const outcome = exitCode === 0 ? 'passed on retry — FLAKY' : 'still failed after retrying';
             console.log(`⚠ ${specs.join(', ')} [${cid}] was retried ${retriesUsed}x and ${outcome}.`);
         }
+    },
+
+    /**
+     * Turns the tags in a test title into Allure labels, so the report can be
+     * filtered and grouped without any Allure call in a spec: `@KAN-4` links
+     * the Jira ticket, every other tag (`@smoke`, `@journey`) becomes an
+     * Allure tag, `@smoke` also marks the test critical, and the `describe`
+     * title becomes the feature.
+     */
+    beforeTest: async function (test: { title: string; parent: string }) {
+        const tags: string[] = test.title.match(/@[\w-]+/g) ?? [];
+        for (const tag of tags.map((t) => t.slice(1))) {
+            if (JIRA_KEY_TAG.test(tag)) {
+                await allureReporter.addIssue(tag);
+            } else {
+                await allureReporter.addTag(tag);
+            }
+        }
+        await allureReporter.addSeverity(tags.includes('@smoke') ? 'critical' : 'normal');
+        await allureReporter.addFeature(test.parent);
     },
 
     afterTest: async function (_test: unknown, _context: unknown, { passed }: { passed: boolean }) {

@@ -74,6 +74,7 @@ Everything you write stays inside the rules in the files step 3 loaded. The ones
 - **Assertions:** retrying `expect…` page methods backed by `elementExpectations.utils.ts`. When the page has no such method, add one. Every check is hard: the framework has no soft assertions. A check marked `[soft]` comes from an older refinement; implement it as a hard assertion and list it in the PR description.
 - **Data:** the case's expected literals (totals, messages) go in `tests/data/placeHolderData.json` and are imported typed. Credentials come from `credentials.support.ts`.
 - **Titles and tags:** `Should …`, like the existing specs; `@smoke` or `@journey` in the title when the case says so. A journey is one `it` whose checkpoints are the case's.
+- **Ticket tag:** every test you add, merge into, or mark `already covered` carries the ticket key as a tag, `@<KEY>`, placed before `@journey`/`@smoke`. A test already tagged with another key keeps it and gains this one (`@KAN-5 @KAN-6`). `wdio.conf.ts` turns the tag into the Jira link in the Allure report, so a missing tag means the report can't trace the test to its ticket.
 - **Guards:** write each guard check the case's steps name, so the test can't pass vacuously.
 
 When the refinement lists an **open question** against a TC's AC, implement the case's written Expected (the refinement's best reading), and carry the question into the PR description.

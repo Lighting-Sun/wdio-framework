@@ -14,7 +14,7 @@ describe('product purchase scenarios', () => {
         await resetBrowserState();
     });
 
-    it('Should add and validate multiple items added to cart', async () => {
+    it('Should add and validate multiple items added to cart @KAN-4', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
         const inventoryNames = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemName');
@@ -25,7 +25,7 @@ describe('product purchase scenarios', () => {
         await cartPage.expectItemCartPrices(inventoryPrices);
     });
 
-    it('Should add and validate a single specific item to cart @smoke', async () => {
+    it('Should add and validate a single specific item to cart @KAN-4 @smoke', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemToCartByName(data.singleCartProduct);
         await inventoryPage.expectItemInCartByName(data.singleCartProduct, data.cartButtonLabels.remove);
@@ -35,7 +35,7 @@ describe('product purchase scenarios', () => {
         await cartPage.expectItemCartPrices([result.itemPrice]);
     });
 
-    it('Should remove every item from the cart', async () => {
+    it('Should remove every item from the cart @KAN-4', async () => {
         await loginAsStandardUser();
         await inventoryPage.addItemsToCartByNames(data.cartProducts);
         await openCart();
@@ -47,7 +47,7 @@ describe('product purchase scenarios', () => {
         await cartPage.header.expectNoCartBadge();
     });
 
-    it('Should remove a product from the cart on the inventory page', async () => {
+    it('Should remove a product from the cart on the inventory page @KAN-4', async () => {
         await loginAsStandardUser();
         await inventoryPage.addItemsToCartByNames(data.cartProducts);
         await inventoryPage.clickInventoryItemRemoveByName(data.singleCartProduct);
@@ -57,7 +57,7 @@ describe('product purchase scenarios', () => {
         await cartPage.expectItemCartNames(cartProductsWithoutSingle);
     });
 
-    it('Should show an empty cart when nothing was added', async () => {
+    it('Should show an empty cart when nothing was added @KAN-6', async () => {
         await loginAsStandardUser();
         await openCart();
         // openCart has confirmed "Your Cart", and this is the row locator the tests

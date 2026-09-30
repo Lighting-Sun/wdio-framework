@@ -19,7 +19,7 @@ describe('complete purchase scenarios', () => {
         await resetBrowserState();
     });
 
-    it('Should complete a purchase from cart to order confirmation @journey @smoke', async () => {
+    it('Should complete a purchase from cart to order confirmation @KAN-6 @journey @smoke', async () => {
         await loginAsStandardUser();
         const result = await inventoryPage.addItemsToCartByNames(data.cartProducts);
         const inventoryNames = inventoryPage.getPropertyValuesFromArrayOfDetails(result, 'itemName');
