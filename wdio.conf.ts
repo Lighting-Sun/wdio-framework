@@ -14,18 +14,25 @@ const environments: Record<string, string> = {
 };
 const baseUrl = environments[selectedEnv] ?? environments['qa'];
 
+/**
+ * `HEADED=1` shows the browser window, for watching a local run. It is ignored
+ * when `CI` is set (GitHub Actions always sets it), so a stray variable can't
+ * make CI try to open a window on a runner that has no display.
+ */
+const headed = process.env.HEADED === '1' && !process.env.CI;
+
 const runInBrowser = (argv['browser'] as string | undefined) ?? 'chrome';
 const browserCap: Record<string, object> = {
     chrome: {
         browserName: 'chrome',
         'goog:chromeOptions': {
-            args: ['headless', 'disable-gpu'],
+            args: headed ? ['disable-gpu'] : ['headless', 'disable-gpu'],
         },
     },
     firefox: {
         browserName: 'firefox',
         'moz:firefoxOptions': {
-            args: ['-headless'],
+            args: headed ? [] : ['-headless'],
         },
     },
 };
