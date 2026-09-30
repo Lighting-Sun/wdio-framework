@@ -60,16 +60,16 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - Smoke tests carry `@smoke` in the `it()` title. That is how CI's grep finds them.
 - No randomized data. A failure has to be reproducible from the test name alone.
 
-**Inventory:** 4 spec files, 12 tests, about 6 s for a full local run.
+**Inventory:** 4 spec files, 13 tests, about 6 s for a full local run.
 
 | File | Tests | What it covers |
 |------|------:|----------------|
 | `tests/specs/login.spec.ts` | 3 | Valid login `@smoke`, locked-out error message, logout through the side menu `@smoke` |
 | `tests/specs/cart.spec.ts` | 4 | Adding a fixed product list and one specific product `@smoke` (cart badge count, the card's Remove button); removing one product then every product from the cart (badge updates, then disappears); removing a product from the inventory page |
 | `tests/specs/completePurchase.spec.ts` | 1 | End to end: login → add → cart → checkout form → overview (names, prices, subtotal) → confirmation |
-| `tests/specs/filter.spec.ts` | 4 | All four sort options (`lohi`, `hilo`, `az`, `za`), data-driven from one scenario table |
+| `tests/specs/inventorySort.spec.ts` | 5 | All four sort options (`az`, `za`, `lohi`, `hilo`): the page opens A to Z (and `az` is checked after moving to `za`), both price sorts break ties by name A to Z (guarded by a shared price existing), and the sort resets to A to Z after going to the cart and back through the side menu's All Items |
 
-**Tradeoff:** `filter.spec.ts` derives its expected order by sorting what the page is already showing, not from a hardcoded list. Adding a product doesn't break it, and a broken sort still does. The cost: if the page loaded the wrong *set* of products, this spec would not notice.
+**Tradeoff:** `inventorySort.spec.ts` derives its expected order by sorting what the page is already showing, not from a hardcoded list. Adding a product doesn't break it, and a broken sort still does. The cost: if the page loaded the wrong *set* of products, this spec would not notice.
 
 ---
 
@@ -115,7 +115,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 |------|--------------|
 | `tests/pages/page.ts` | Base class: creates `WdioFactoryUtils`, provides `open(path)` |
 | `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
-| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions; dynamic per-product name, price, add-to-cart and remove locators; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
+| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions, and `getProducts()` pairing them; dynamic per-product name, price, add-to-cart and remove locators; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
 | `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeItemFromCartByName()`, `removeAllItemsFromCart()`, checkout button; owns `Header` |
 | `tests/pages/checkout.page.ts` | First name, last name, postal code, continue; `fillPersonalInformationForm()`; owns `Header` |
 | `tests/pages/overview.page.ts` | Item names and prices with retrying assertions, numeric prices, **subtotal** (no tax or total), finish button; owns `Header` |
@@ -200,7 +200,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it provides |
 |------|------------------|
-| `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
+| `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `sortByPriceThenName` (price, then name A to Z for ties), `findSharedValues`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
 | `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo` |
 
 **Tradeoff:** one data file is simple, but it can't hold per-environment values. It will need splitting when environments diverge.
@@ -337,5 +337,5 @@ Only gaps that change how new code should be written.
 | Node 26 | Not supported yet; use Node 24 (`.nvmrc`). On 26, `@puppeteer/browsers` extracts ChromeDriver's licence files but not the binary, and WDIO then refuses the half-filled cache folder, so every test fails at startup. WDIO before 9.32 also couldn't create sessions on 26. |
 | Firefox | Configured and offered by `ci-on-demand.yml`, but no recorded CI run has used it. Treat it as unverified. |
 | Environment-specific test data | Only `placeHolderData.json` exists, so per-environment values have nowhere to go. |
-| Side-menu coverage | Only Logout is exercised. All Items, About and Reset App State have no tests. |
+| Side-menu coverage | Logout and All Items are exercised. About, Reset App State and Dynamic Catalog have no tests. |
 | Unit tests | None. The pure utilities and `getSelectorByValue`'s validation are covered only indirectly, by e2e runs. |

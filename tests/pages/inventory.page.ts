@@ -1,5 +1,5 @@
 import Header from '../components/header.component.js';
-import UtilsMethods from '../utils/utilsMethods.utils.js';
+import UtilsMethods, { type ListedProduct } from '../utils/utilsMethods.utils.js';
 import Page from './page.js';
 
 type ItemDetail = { itemName: string; itemPrice: string };
@@ -67,6 +67,13 @@ class Inventory extends Page {
             () => this.getTextFromPrices(),
             expectedPrices,
         );
+    }
+
+    /** Every product's name and price, in the order the grid shows them. Reads once. */
+    async getProducts(): Promise<ListedProduct[]> {
+        const names = await this.getTextFromNames();
+        const prices = await this.getTextFromPrices();
+        return names.map((name, index) => ({ name, price: prices[index] }));
     }
 
     /**
