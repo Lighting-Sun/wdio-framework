@@ -1,6 +1,6 @@
 # wdio-framework Architecture
 
-**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (PR #25), and again against `main` at `2c4cbc8` when agent tooling was added. Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
+**Verified against the code:** 2026-09-23, `main` at `9f18c20` (after the audit branch merged). Layer 7 (Infrastructure) re-checked the same day for the Node 24 / dependency update (PR #25), and again against `main` at `2c4cbc8` when agent tooling was added. Layers 3–5 re-checked on 2026-09-30 against `main` at `3343f98` plus the Browser Interaction refactor (`WdioFactoryUtils` split into `elementActions`, `elementExpectations` and `locator`). Every rule below was checked against the source, and wherever the code breaks a rule, *Known Gaps* says so.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Three edges the tree cannot draw, all of them real imports:
 
 - **Page Objects → Pure Utilities.** `inventory.page.ts` imports `UtilsMethods.toProductSlug`.
 - **Test Support → Data.** `credentials.support.ts` falls back to `placeHolderData.json`.
-- **Test Support → WebdriverIO**, directly, for session state. This is the one sanctioned bypass of the factory (see Layer 2).
+- **Test Support → WebdriverIO**, directly, for session state. This is the one sanctioned bypass of Browser Interaction (see Layer 2).
 
 **Entry point:** Test Specification. Nothing in the project imports a spec.
 **Foundation:** Browser Interaction, and Pure Utilities + Data. Neither imports anything else in the project.
@@ -51,7 +51,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 **Rules:**
 
 - **No `$()` or `$$()` in a spec**, ever. Interactions go through page objects or Test Support.
-- **Specs never receive raw elements.** Assertions go through page methods backed by the factory's retrying helpers (`expectItemCartNames`, `expectTextFromPrices`, `expectCompletePurchaseText`, …).
+- **Specs never receive raw elements.** Assertions go through page methods backed by the retrying helpers in `elementExpectations.utils.ts` (`expectItemCartNames`, `expectTextFromPrices`, `expectCompletePurchaseText`, …).
 - **The only `browser` reference a spec may make is a URL assertion**, `await expect(browser).toHaveUrl(expect.stringContaining('/path'))`. This is current practice (4 call sites) rather than a documented decision. See *Known Gaps*.
 - Page objects are imported as singletons and never instantiated in a spec.
 - Credentials come from `tests/support/credentials.support.ts`, never from the JSON. Other fixture data comes from `tests/data/placeHolderData.json` as a typed JSON module: `import data from '../data/placeHolderData.json' with { type: 'json' }`.
@@ -83,7 +83,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 - **A fixture must never hide the thing under test.** Only tests that need to *be* logged in use `loginAsStandardUser()`. The two tests in `login.spec.ts` whose subject is logging in drive the login page directly, on purpose.
 - **Every flow asserts that it arrived** (URL and page title) before returning. That way a broken precondition fails as a precondition, not three steps later as a mystery.
-- This is the only layer above the factory allowed to use `browser.*`, because session state is not a page concern.
+- This is the only layer above Browser Interaction allowed to use `browser.*`, because session state is not a page concern.
 - Credentials are read from the environment, with the committed JSON as fallback. Pointing the framework at a real application then becomes a config change, not a security incident.
 
 **Inventory:**
@@ -102,12 +102,12 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 **Rules:**
 
-- Every page extends `Page` (`tests/pages/page.ts`), which provides `this.wdioFactory` and `open(path)`.
+- Every page extends `Page` (`tests/pages/page.ts`), which provides `open(path)`.
 - Every page exports a singleton: `export default new XxxPage()`.
-- Every locator is `{ selector, description }`, matching the factory's exported `Locator` interface. The `locators` objects aren't annotated with it; the factory's parameter types enforce the shape. The description appears in failure messages and Allure steps, so write it for someone reading a red build.
-- All interaction goes through `this.wdioFactory.*`. **No `$()` or `$$()`** (this holds today). The only `browser.*` call a page may make is `Page.open()`. Two pages currently break this; see *Known Gaps*.
+- Every locator is `{ selector, description }`, matching the `Locator` interface in `tests/utils/locator.utils.ts`. The `locators` objects aren't annotated with it; the Browser Interaction functions' parameter types enforce the shape. The description appears in failure messages and Allure steps, so write it for someone reading a red build.
+- All interaction goes through the Browser Interaction functions, imported as `import * as actions from '../utils/elementActions.utils.js'` and `import * as expectations from '../utils/elementExpectations.utils.js'`. **No `$()` or `$$()`**: ESLint's `no-restricted-globals` fails the build on either. The only `browser.*` call a page may make is `Page.open()`. One page currently breaks this; see *Known Gaps*.
 - Pages with the app header declare `header = new Header()`. Every page except `LoginPage` does.
-- Dynamic locators put `${value}` in both selector and description, resolved with `this.wdioFactory.getSelectorByValue(locator, value)` before any other factory call.
+- Dynamic locators put `${value}` in both selector and description, resolved with `getSelectorByValue(locator, value)` from `locator.utils.ts` before the locator is passed to any action or expectation.
 - **Locators never match on visible text. Prefer SauceDemo's `data-test` attributes** for anything new. Some older locators use ids or classes (`#login-button`, `#first-name`, `.bm-burger-button`, `span.title`, `select.product_sort_container`), which are stable enough on SauceDemo but not the model to copy. `UtilsMethods.toProductSlug()` turns `"Sauce Labs Onesie"` into `sauce-labs-onesie`, and `:has(button[data-test$='-sauce-labs-onesie'])` finds that card. The `$=` suffix match is deliberate: it survives the button flipping between `add-to-cart-` and `remove-`.
 - **Where a page exposes a list, it exposes a retrying `expect…` method for it**, not just a getter. An action that re-renders the list races a single read.
 
@@ -115,7 +115,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it owns |
 |------|--------------|
-| `tests/pages/page.ts` | Base class: creates `WdioFactoryUtils`, provides `open(path)` |
+| `tests/pages/page.ts` | Base class: provides `open(path)` |
 | `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
 | `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions, and `getProducts()` pairing them; dynamic per-product name, price, add-to-cart and remove locators; a dynamic per-product description locator (`getInventoryItemDescriptionByNameText()`); `expectEveryPriceToMatch()` for the price format; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
 | `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeItemFromCartByName()`, `removeAllItemsFromCart()`, checkout button; owns `Header` |
@@ -133,7 +133,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 **Rules:**
 
-- Every component extends `BaseComponent` (`tests/components/base.component.ts`) and interacts only through `this.wdioFactoryUtils.*`. The property is named differently from the pages' `wdioFactory`; that inconsistency is historical.
+- Components are plain classes with no base class. Like pages, they interact only through the `actions` and `expectations` modules.
 - Components are never singletons. Pages instantiate them in the class body.
 - `Header` owns `SideMenu` as `sideMenu = new SideMenu()`, reached as `page.header.sideMenu`.
 - Side-menu options are addressed by their `data-test` slug in lowercase: `clickOnSideMenuOptionByValue('logout')`.
@@ -142,7 +142,6 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it owns |
 |------|--------------|
-| `tests/components/base.component.ts` | Base class: creates `WdioFactoryUtils` |
 | `tests/components/header.component.ts` | Burger menu button, cart button, cart badge with `expectCartBadgeCount()` / `expectNoCartBadge()`, page title with `expectPageTitle()`, sort dropdown; owns `SideMenu` |
 | `tests/components/sidemenu.component.ts` | Dynamic `${value}-sidebar-link` locator; `clickOnSideMenuOptionByValue()` |
 
@@ -154,38 +153,59 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 **Responsibility:** the only sanctioned route to WebdriverIO element APIs. It wraps DOM operations with explicit waits, readable timeout messages and Allure steps.
 
+It is three modules of stateless exported functions, split by what each one is for. There is no class to instantiate:
+
+- `elementActions.utils.ts` changes or reads the page.
+- `elementExpectations.utils.ts` asserts on it, with retries.
+- `locator.utils.ts` holds the locator shape and has no WebdriverIO dependency at all.
+
+Expectations import from actions (to read texts), and both import `Locator`. Nothing imports in the other direction.
+
 **Rules:**
 
-- `$()` and `$$()` appear in this file and nowhere else.
-- **Every method that acts or asserts logs an Allure step**, and every step is awaited: `addStep` and `addAttachment` return promises. The pure or read-only helpers (`getSelectorByValue`, `getAttribute`, `getElements`, `getTextFromElements`) deliberately log nothing.
-- Don't call Allure from pages, components or specs. If more context is needed, extend this class.
+- `$()` and `$$()` appear in `elementActions.utils.ts` and `elementExpectations.utils.ts` and nowhere else. ESLint's `no-restricted-globals` enforces it for every other file under `tests/`.
+- **Raw WebdriverIO elements never leave these modules.** Functions take a `Locator` and return strings, numbers or nothing. `$()` is re-run on every call, so a re-rendered element is never stale.
+- **Every function that acts or asserts logs an Allure step**, and every step is awaited: `addStep` and `addAttachment` return promises. The read-only helpers (`getAttribute`, `getTextFromElements`, `countElements`) and `getSelectorByValue` deliberately log nothing.
+- Don't call Allure from pages, components or specs. If more context is needed, add a function here.
+- **An assertion goes in `elementExpectations`, an interaction or read goes in `elementActions`.** A function that does both belongs in expectations.
 - **Assertions assert on the element, not on a resolved string**, so `expect-webdriverio` retries. `expect(await getText()).toEqual(x)` checks once and races the page.
-- Waits are bounded. Nothing in this file loops without a ceiling.
+- Waits are bounded. Nothing here loops without a ceiling.
 
-**Inventory** (`tests/utils/wdioFactory.utils.ts`):
+**Inventory:**
+
+`tests/utils/locator.utils.ts`
 
 | Member | What it does |
 |--------|--------------|
 | `Locator` (interface) | `{ selector, description }`, the shape every locator in the project uses |
+| `getSelectorByValue(element, value)` | Substitutes `${value}` into selector and description; **throws** on a missing placeholder or on quote characters |
+
+`tests/utils/elementActions.utils.ts`
+
+| Member | What it does |
+|--------|--------------|
 | `click(element)` | Waits for clickable, clicks, logs |
 | `setValue(element, value)` | Waits for enabled, sets the value (no implicit click), logs |
+| `selectOptionFromSelect(element, attr, value)` | Waits for displayed, selects by attribute |
 | `getText(element)` | Waits for displayed, returns text, logs |
 | `getAttribute(element, attribute)` | One attribute of one element, read once (null if absent); feeds `expectEventuallyEquals` |
-| `getElements(elements)` | All matches as an array. **Its `await` is load-bearing;** see below |
 | `getTextFromElements(elements)` | Text of every match, read once |
+| `countElements(elements)` | How many elements match right now |
+| `clickAllIfExists(element)` | Clicks each match, **bounded by the initial count** (2 s probe), then waits for none to remain |
+
+`tests/utils/elementExpectations.utils.ts`
+
+| Member | What it does |
+|--------|--------------|
 | `expectText(element, expected)` | Retrying assertion on one element's text |
 | `expectNotExisting(element)` | Retrying assertion that nothing matches the locator |
 | `expectEventuallyEquals(label, readValues, expected)` | Re-reads a collected list until it matches (10 s), then asserts once more for a readable diff |
 | `expectTextsFromElements(elements, expected)` | `expectEventuallyEquals` over a locator's texts |
 | `expectEveryTextToMatch(elements, pattern)` | Re-reads a locator's texts until every one matches the pattern (10 s); fails on no matches, and the diff lists the texts that don't match |
-| `selectOptionFromSelect(element, attr, value)` | Waits for displayed, selects by attribute |
-| `clickAllIfExists(element)` | Clicks each match, **bounded by the initial count** (2 s probe), then waits for none to remain |
-| `getSelectorByValue(element, value)` | Substitutes `${value}` into selector and description; **throws** on a missing placeholder or on quote characters |
 
-**Two traps, both commented in the code. Read them before editing:**
+**A trap, commented in the code. Read it before editing:** `getSelectorByValue` **rejects** quotes rather than escaping them. Correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently.
 
-- `getSelectorByValue` **rejects** quotes rather than escaping them. Correct XPath escaping needs `concat()`, which string substitution cannot express. Failing loudly beats building a broken selector silently.
-- The `await` on `$$(...)` in `getElements` is **load-bearing**, even though `@typescript-eslint/await-thenable` flags it. WDIO types `ChainablePromiseArray` as not-a-Promise, but the runtime object is one. Without the await, `.length` is a Promise and every loop over it silently does nothing, so tests would pass while doing nothing. A scoped `eslint-disable-next-line` covers it.
+**Tradeoff:** functions rather than a class means there is nothing to mock or subclass, and nothing to configure per page. That holds while every function is stateless. A per-page setting such as a custom timeout would have to be passed as an argument, not stored.
 
 ---
 
@@ -237,7 +257,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `package.json` | Scripts (`test`, `typecheck`, `lint`, `lint:fix`, `format`, `format:check`, Allure), `engines.node >=24.0.0`, ESM |
 | `tsconfig.json` | `strict`, `NodeNext`, `resolveJsonModule`; Node (`@types/node` 24), WDIO and Mocha global types |
 | `allure-commandline.d.ts` | Type declaration for the untyped `allure-commandline` package used by `onComplete` |
-| `eslint.config.js` | Flat config: JS + TS recommended, four type-aware rules (`no-floating-promises`, `await-thenable`, `require-await`, `no-shadow`), `eslint-plugin-wdio` on `tests/`, Prettier compatibility last |
+| `eslint.config.js` | Flat config: JS + TS recommended, four type-aware rules (`no-floating-promises`, `await-thenable`, `require-await`, `no-shadow`), `eslint-plugin-wdio` on `tests/`, `no-restricted-globals` forbidding `$`/`$$` outside the two Browser Interaction modules, Prettier compatibility last |
 | `.prettierrc` / `.prettierignore` | Formatting for code only. `*.md` and `.github` are excluded on purpose |
 | `.nvmrc` | Node 24.21.0 (LTS), read by both workflows |
 | `.github/workflows/ci.yml` | PR to `main`, push to `main` (and the dead `continous-integration` branch): typecheck → lint → full suite on QA, Chrome → Allure artifact |
@@ -251,13 +271,13 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 ### Allure logging
 
-- **Where:** only in `wdioFactory.utils.ts` (steps) and `wdio.conf.ts` (failure screenshot, report generation). WDIO's own step and screenshot reporting is disabled so the factory steps are the whole story.
+- **Where:** only in `elementActions.utils.ts` and `elementExpectations.utils.ts` (steps) and `wdio.conf.ts` (failure screenshot, report generation). WDIO's own step and screenshot reporting is disabled so the Browser Interaction steps are the whole story.
 - **Rule:** no Allure calls anywhere else. Always await them.
 
 ### Waiting and assertions
 
-- **Where:** the factory. Element waits use `waitforTimeout` (10 s); list assertions use `expectEventuallyEquals` (10 s); the Mocha test timeout is 60 s.
-- **Rule:** assert on something that retries. If you need a new assertion shape, add a factory helper and a page method; don't read once and compare in the spec.
+- **Where:** Browser Interaction. Element waits use `waitforTimeout` (10 s); list assertions use `expectEventuallyEquals` (10 s); the Mocha test timeout is 60 s.
+- **Rule:** assert on something that retries. If you need a new assertion shape, add a function to `elementExpectations.utils.ts` and a page method; don't read once and compare in the spec.
 
 ### Test data and credentials
 
@@ -335,7 +355,7 @@ Only gaps that change how new code should be written.
 | Rare worker crash (**open**) | About 1 full run in 25–40, a worker process dies during ChromeDriver startup with Windows exit code `0xC0000409`, before any test runs. There's no Allure result or screenshot, and whichever spec it held is reported failed. Not spec-specific. Seen only on the Windows dev machine, never in CI. Untested experiments: a per-worker ChromeDriver cache directory, then `maxInstances: 2`. **Don't debug it inside a spec.** |
 | CI artifact on a red run (deferred by owner decision) | Neither workflow's upload step has `if: always()`, so the Allure report exists only for green runs. On a red run, read the job log. |
 | `--env dev` (deferred by owner decision) | Points at `saucedemo.com/v1/`, which is not a working target. Use `qa`. |
-| `browser.*` outside its sanctioned places | Beyond the factory, Test Support and `Page.open()`: specs make 4 `expect(browser).toHaveUrl` calls, `login.page.ts` reads `browser.options.baseUrl`, and `cart.page.ts` calls `browser.waitUntil` after `clickAllIfExists`, which already performs that same wait. URL assertions need either a factory helper or an explicit exception; that decision is still to be made. Don't add new ones in the meantime. |
+| `browser.*` outside its sanctioned places | Beyond Browser Interaction, Test Support and `Page.open()`: specs make 4 `expect(browser).toHaveUrl` calls, and `login.page.ts` reads `browser.options.baseUrl`. URL assertions need either an `elementExpectations` function or an explicit exception; that decision is still to be made. Don't add new ones in the meantime. |
 | Read-once getters with no callers | Ten public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getValuesFromPrices` and `getSubTotalValue`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reads once and races the page. |
 | TypeScript 7 | Held on 6.0.x: every `typescript-eslint` release declares `typescript <6.1.0`. When one supports 7, check with `npm view typescript-eslint peerDependencies.typescript`, then `npm install -D typescript@^7 typescript-eslint@<that version>`, run `npm run typecheck` and `npm run lint`, and treat every new error as real (TS 7 is a rewrite). Check `eslint-plugin-wdio`'s peer range too, then run the suite and dispatch CI before a PR. |
 | Node 26 | Not supported yet; use Node 24 (`.nvmrc`). On 26, `@puppeteer/browsers` extracts ChromeDriver's licence files but not the binary, and WDIO then refuses the half-filled cache folder, so every test fails at startup. WDIO before 9.32 also couldn't create sessions on 26. |

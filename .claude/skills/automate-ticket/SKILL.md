@@ -52,7 +52,7 @@ Otherwise, on a fresh start:
 
 ### 3. Load the framework
 
-Run `bash .claude/skills/refine-ticket/load-context.sh` and read its whole output. It's the same list the refinement was derived from, so the rules its cases assume are the rules you implement under. Also read `architecture/.claude.md`, `tests/support/credentials.support.ts`, `tests/data/placeHolderData.json`, and the factory `tests/utils/wdioFactory.utils.ts` for the helpers you'll call.
+Run `bash .claude/skills/refine-ticket/load-context.sh` and read its whole output. It's the same list the refinement was derived from, so the rules its cases assume are the rules you implement under. Also read `architecture/.claude.md`, `tests/support/credentials.support.ts`, `tests/data/placeHolderData.json`, and the Browser Interaction modules `tests/utils/elementActions.utils.ts`, `tests/utils/elementExpectations.utils.ts` and `tests/utils/locator.utils.ts` for the functions you'll call.
 
 **Done when:** you can name, for every TC, the files it will touch.
 
@@ -71,7 +71,7 @@ Everything you write stays inside the rules in the files step 3 loaded. The ones
 
 - **Locators:** before adding or changing one, snapshot the live DOM with Playwright MCP (log in with the users from `credentials.support.ts`). Rank candidates `data-test` → `id` → a stable attribute (`name`, `aria-*`) → structural CSS → XPath; visible text never. Each locator is `{ selector, description }`, with the description written for someone reading a red build.
 - **Placement:** a page action goes on its page object, a fragment shared by pages on a component, a starting state in a flow. The spec holds only steps and page `expect…` calls.
-- **Assertions:** retrying `expect…` page methods backed by the factory. When the page has no such method, add one. Every check is hard: the framework has no soft assertions. A check marked `[soft]` comes from an older refinement; implement it as a hard assertion and list it in the PR description.
+- **Assertions:** retrying `expect…` page methods backed by `elementExpectations.utils.ts`. When the page has no such method, add one. Every check is hard: the framework has no soft assertions. A check marked `[soft]` comes from an older refinement; implement it as a hard assertion and list it in the PR description.
 - **Data:** the case's expected literals (totals, messages) go in `tests/data/placeHolderData.json` and are imported typed. Credentials come from `credentials.support.ts`.
 - **Titles and tags:** `Should …`, like the existing specs; `@smoke` or `@journey` in the title when the case says so. A journey is one `it` whose checkpoints are the case's.
 - **Guards:** write each guard check the case's steps name, so the test can't pass vacuously.
