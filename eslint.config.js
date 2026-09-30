@@ -73,6 +73,22 @@ export default tseslint.config(
         },
     },
 
+    {
+        // Every Allure call goes through report.utils.ts, so steps keep one
+        // shape (opened before the action, failed on a throw) and one place to change.
+        files: ['tests/**/*.ts'],
+        ignores: ['tests/utils/report.utils.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    name: '@wdio/allure-reporter',
+                    message: 'Use step() from tests/utils/report.utils.ts.',
+                },
+            ],
+        },
+    },
+
     // Must stay last: turns off every rule that would fight Prettier.
     prettier,
 );

@@ -1,5 +1,6 @@
 import * as actions from '../utils/elementActions.utils.js';
 import * as expectations from '../utils/elementExpectations.utils.js';
+import { step } from '../utils/report.utils.js';
 import Page from './page.js';
 
 class LoginPage extends Page {
@@ -60,9 +61,11 @@ class LoginPage extends Page {
     }
 
     async loginWithCredentials(username: string, password: string): Promise<void> {
-        await this.fillUsername(username);
-        await this.fillPassword(password);
-        await this.clickOnLoginBtn();
+        await step(`👤 Log in as "${username}"`, async () => {
+            await this.fillUsername(username);
+            await this.fillPassword(password);
+            await this.clickOnLoginBtn();
+        });
     }
 }
 

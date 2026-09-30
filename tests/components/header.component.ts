@@ -1,5 +1,6 @@
 import * as actions from '../utils/elementActions.utils.js';
 import * as expectations from '../utils/elementExpectations.utils.js';
+import { step } from '../utils/report.utils.js';
 import SideMenu from './sidemenu.component.js';
 
 class Header {
@@ -20,7 +21,7 @@ class Header {
         },
         pageTitle: {
             selector: 'span.title',
-            description: 'title located in the header, indicating in which page we are on',
+            description: 'page title in the header',
         },
         sortFilterDropdown: {
             selector: 'select.product_sort_container',
@@ -50,8 +51,10 @@ class Header {
     }
 
     async clickOnSortFilterDropdownOption(value: string): Promise<void> {
-        await actions.click(this.locators.sortFilterDropdown);
-        await actions.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', value);
+        await step(`🔽 Sort products by "${value}"`, async () => {
+            await actions.click(this.locators.sortFilterDropdown);
+            await actions.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', value);
+        });
     }
 
     async clickOnShoppingCartBtn(): Promise<void> {

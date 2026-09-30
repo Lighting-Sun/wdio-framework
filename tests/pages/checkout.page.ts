@@ -1,6 +1,7 @@
 import Header from '../components/header.component.js';
 import * as actions from '../utils/elementActions.utils.js';
 import * as expectations from '../utils/elementExpectations.utils.js';
+import { step } from '../utils/report.utils.js';
 import Page from './page.js';
 
 class CheckoutPage extends Page {
@@ -64,9 +65,11 @@ class CheckoutPage extends Page {
     }
 
     async fillPersonalInformationForm(firstName: string, lastName: string, postalCode: string): Promise<void> {
-        await this.fillFirstName(firstName);
-        await this.fillLastName(lastName);
-        await this.fillPostalCode(postalCode);
+        await step('📝 Fill the checkout information form', async () => {
+            await this.fillFirstName(firstName);
+            await this.fillLastName(lastName);
+            await this.fillPostalCode(postalCode);
+        });
     }
 }
 
