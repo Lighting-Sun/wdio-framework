@@ -15,6 +15,7 @@ class LoginPage extends Page {
         passwordInput: {
             selector: "input[data-test='password']",
             description: 'password input field',
+            sensitive: true,
         },
         loginErrorMessage: {
             selector: "h3[data-test='error']",

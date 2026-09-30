@@ -1,6 +1,6 @@
-import allureReporter from '@wdio/allure-reporter';
 import { getTextFromElements } from './elementActions.utils.js';
 import type { Locator } from './locator.utils.js';
+import { step } from './report.utils.js';
 
 /** How long a group-of-elements assertion keeps re-reading the DOM before failing. */
 const TEXTS_RETRY_TIMEOUT = 10_000;
@@ -12,8 +12,9 @@ const TEXTS_RETRY_TIMEOUT = 10_000;
  * `expect(await getText()).toEqual(...)`, which only checks once.
  */
 export async function expectText(element: Locator, expectedText: string): Promise<void> {
-    await expect($(element.selector)).toHaveText(expectedText);
-    await allureReporter.addStep(`✅ ${element.description} has text "${expectedText}"`);
+    await step(`🔎 Expect ${element.description} to have text "${expectedText}"`, async () => {
+        await expect($(element.selector)).toHaveText(expectedText);
+    });
 }
 
 /**
@@ -22,8 +23,9 @@ export async function expectText(element: Locator, expectedText: string): Promis
  * re-render instead of passing on a DOM that hasn't caught up yet.
  */
 export async function expectNotExisting(element: Locator): Promise<void> {
-    await expect($(element.selector)).not.toBeExisting();
-    await allureReporter.addStep(`✅ ${element.description} is not present`);
+    await step(`🔎 Expect ${element.description} to be absent`, async () => {
+        await expect($(element.selector)).not.toBeExisting();
+    });
 }
 
 /**
@@ -41,26 +43,27 @@ export async function expectEventuallyEquals<T>(
     readValues: () => Promise<T[]>,
     expected: T[],
 ): Promise<void> {
-    let actualValues: T[] = [];
+    await step(`🔎 Expect ${label} to equal ${expected.length} expected value(s)`, async () => {
+        let actualValues: T[] = [];
 
-    await browser
-        .waitUntil(
-            async () => {
-                actualValues = await readValues();
-                return (
-                    actualValues.length === expected.length &&
-                    actualValues.every((value, index) => value === expected[index])
-                );
-            },
-            {
-                timeout: TEXTS_RETRY_TIMEOUT,
-                timeoutMsg: `❌ ${label} never matched the expected values.`,
-            },
-        )
-        .catch(() => undefined);
+        await browser
+            .waitUntil(
+                async () => {
+                    actualValues = await readValues();
+                    return (
+                        actualValues.length === expected.length &&
+                        actualValues.every((value, index) => value === expected[index])
+                    );
+                },
+                {
+                    timeout: TEXTS_RETRY_TIMEOUT,
+                    timeoutMsg: `❌ ${label} never matched the expected values.`,
+                },
+            )
+            .catch(() => undefined);
 
-    expect(actualValues).toEqual(expected);
-    await allureReporter.addStep(`✅ ${label} matches ${expected.length} expected value(s)`);
+        expect(actualValues).toEqual(expected);
+    });
 }
 
 /** Retrying equivalent of reading a group of elements and comparing their text. */
@@ -75,23 +78,27 @@ export async function expectTextsFromElements(elements: Locator, expectedTexts: 
  * match.
  */
 export async function expectEveryTextToMatch(elements: Locator, pattern: RegExp): Promise<void> {
-    const mismatches = (texts: string[]): string[] => texts.filter((text) => !pattern.test(text));
-    let actualTexts: string[] = [];
+    await step(`🔎 Expect every ${elements.description} to match ${String(pattern)}`, async (context) => {
+        const mismatches = (texts: string[]): string[] => texts.filter((text) => !pattern.test(text));
+        let actualTexts: string[] = [];
 
-    await browser
-        .waitUntil(
-            async () => {
-                actualTexts = await getTextFromElements(elements);
-                return actualTexts.length > 0 && mismatches(actualTexts).length === 0;
-            },
-            {
-                timeout: TEXTS_RETRY_TIMEOUT,
-                timeoutMsg: `❌ ${elements.description} never all matched ${String(pattern)}.`,
-            },
-        )
-        .catch(() => undefined);
+        await browser
+            .waitUntil(
+                async () => {
+                    actualTexts = await getTextFromElements(elements);
+                    return actualTexts.length > 0 && mismatches(actualTexts).length === 0;
+                },
+                {
+                    timeout: TEXTS_RETRY_TIMEOUT,
+                    timeoutMsg: `❌ ${elements.description} never all matched ${String(pattern)}.`,
+                },
+            )
+            .catch(() => undefined);
 
-    expect(actualTexts).not.toHaveLength(0);
-    expect(mismatches(actualTexts)).toEqual([]);
-    await allureReporter.addStep(`✅ all ${actualTexts.length} ${elements.description} match ${String(pattern)}`);
+        expect(actualTexts).not.toHaveLength(0);
+        expect(mismatches(actualTexts)).toEqual([]);
+        await context.displayName(
+            `🔎 Expect every ${elements.description} to match ${String(pattern)} (${actualTexts.length} checked)`,
+        );
+    });
 }

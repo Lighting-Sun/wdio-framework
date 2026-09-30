@@ -1,6 +1,8 @@
 export interface Locator {
     selector: string;
     description: string;
+    /** Hides any value typed into this element from the report (passwords, tokens). */
+    sensitive?: boolean;
 }
 
 /** Token that dynamic locators substitute a runtime value into. */
@@ -36,6 +38,7 @@ export function getSelectorByValue(element: Locator, value: string | number): Lo
     }
 
     return {
+        ...element,
         selector: element.selector.replaceAll(VALUE_PLACEHOLDER, valueStr),
         description: element.description.replaceAll(VALUE_PLACEHOLDER, valueStr),
     };
