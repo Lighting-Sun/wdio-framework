@@ -30,6 +30,10 @@ class Inventory extends Page {
             selector: "button[data-test='add-to-cart-${value}']",
             description: "add to cart button for '${value}'",
         },
+        inventoryRemoveButtonByName: {
+            selector: "button[data-test='remove-${value}']",
+            description: "remove from cart button for '${value}'",
+        },
     };
 
     async getTextFromNames(): Promise<string[]> {
@@ -104,6 +108,40 @@ class Inventory extends Page {
             UtilsMethods.toProductSlug(value),
         );
         await this.wdioFactory.click(selector);
+    }
+
+    async clickInventoryItemRemoveByName(value: string): Promise<void> {
+        const selector = this.wdioFactory.getSelectorByValue(
+            this.locators.inventoryRemoveButtonByName,
+            UtilsMethods.toProductSlug(value),
+        );
+        await this.wdioFactory.click(selector);
+    }
+
+    /**
+     * A product in the cart shows its Remove button in place of Add to cart.
+     * Checking both sides stops the test passing on a card that shows both.
+     */
+    async expectItemInCartByName(value: string, removeLabel: string): Promise<void> {
+        const slug = UtilsMethods.toProductSlug(value);
+        await this.wdioFactory.expectText(
+            this.wdioFactory.getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug),
+            removeLabel,
+        );
+        await this.wdioFactory.expectNotExisting(
+            this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
+        );
+    }
+
+    async expectItemNotInCartByName(value: string, addToCartLabel: string): Promise<void> {
+        const slug = UtilsMethods.toProductSlug(value);
+        await this.wdioFactory.expectText(
+            this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
+            addToCartLabel,
+        );
+        await this.wdioFactory.expectNotExisting(
+            this.wdioFactory.getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug),
+        );
     }
 
     async addItemToCartByName(value: string): Promise<ItemDetail> {

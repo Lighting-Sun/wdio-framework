@@ -50,7 +50,7 @@ export const config: WebdriverIO.Config = {
     specs: ['./tests/specs/**/*.ts'],
     suites: {
         regression: [
-            './tests/specs/addProductsToCart.spec.ts',
+            './tests/specs/cart.spec.ts',
             './tests/specs/completePurchase.spec.ts',
             './tests/specs/filter.spec.ts',
             './tests/specs/login.spec.ts',

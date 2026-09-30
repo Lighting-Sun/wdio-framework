@@ -13,6 +13,10 @@ class Header extends BaseComponent {
             selector: '#shopping_cart_container',
             description: 'shopping cart button in the header',
         },
+        shoppingCartBadge: {
+            selector: "span[data-test='shopping-cart-badge']",
+            description: 'shopping cart badge showing the number of products in the cart',
+        },
         pageTitle: {
             selector: 'span.title',
             description: 'title located in the header, indicating in which page we are on',
@@ -29,6 +33,15 @@ class Header extends BaseComponent {
 
     async expectPageTitle(expectedTitle: string): Promise<void> {
         await this.wdioFactoryUtils.expectText(this.locators.pageTitle, expectedTitle);
+    }
+
+    async expectCartBadgeCount(expectedCount: number): Promise<void> {
+        await this.wdioFactoryUtils.expectText(this.locators.shoppingCartBadge, String(expectedCount));
+    }
+
+    /** SauceDemo removes the badge entirely when the cart is empty, rather than showing "0". */
+    async expectNoCartBadge(): Promise<void> {
+        await this.wdioFactoryUtils.expectNotExisting(this.locators.shoppingCartBadge);
     }
 
     async clickOnBurgerMenuBtn(): Promise<void> {

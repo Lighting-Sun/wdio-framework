@@ -111,6 +111,16 @@ export default class WdioFactoryUtils {
     }
 
     /**
+     * Retrying assertion that no element matches the locator. The negated
+     * matcher keeps re-querying until the element is gone, so it waits out a
+     * re-render instead of passing on a DOM that hasn't caught up yet.
+     */
+    async expectNotExisting(element: Locator): Promise<void> {
+        await expect($(element.selector)).not.toBeExisting();
+        await allureReporter.addStep(`✅ ${element.description} is not present`);
+    }
+
+    /**
      * Re-reads `readValues` until it matches `expected`, then asserts once
      * more so a failure reports a readable diff rather than a bare `waitUntil`
      * timeout.
