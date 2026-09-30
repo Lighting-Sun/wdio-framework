@@ -60,14 +60,15 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 - Smoke tests carry `@smoke` in the `it()` title. That is how CI's grep finds them.
 - No randomized data. A failure has to be reproducible from the test name alone.
 
-**Inventory:** 4 spec files, 13 tests, about 6 s for a full local run.
+**Inventory:** 5 spec files, 15 tests, about 6 s for a full local run.
 
 | File | Tests | What it covers |
 |------|------:|----------------|
 | `tests/specs/login.spec.ts` | 3 | Valid login `@smoke`, locked-out error message, logout through the side menu `@smoke` |
-| `tests/specs/cart.spec.ts` | 4 | Adding a fixed product list and one specific product `@smoke` (cart badge count, the card's Remove button); removing one product then every product from the cart (badge updates, then disappears); removing a product from the inventory page |
-| `tests/specs/completePurchase.spec.ts` | 1 | End to end: login → add → cart → checkout form → overview (names, prices, subtotal) → confirmation |
-| `tests/specs/inventorySort.spec.ts` | 5 | All four sort options (`az`, `za`, `lohi`, `hilo`): the page opens A to Z (and `az` is checked after moving to `za`), both price sorts break ties by name A to Z (guarded by a shared price existing), and the sort resets to A to Z after going to the cart and back through the side menu's All Items |
+| `tests/specs/cart.spec.ts` | 5 | Adding a fixed product list and one specific product `@smoke` (cart badge count, the card's Remove button); removing one product then every product from the cart (badge updates, then disappears); removing a product from the inventory page; the cart is empty (no rows, no badge) when nothing was added |
+| `tests/specs/completePurchase.spec.ts` | 1 | Purchase journey `@journey @smoke`: login → add → cart → checkout form → overview (product names carry through) → confirmation, asserting each transition (URL and title). Prices and totals are left to `overview.spec.ts` |
+| `tests/specs/overview.spec.ts` | 1 | The checkout overview, reached with `reachOverview`: each row's name, description and price equal what the inventory showed, and Item total, Tax (8%, rounded up to the cent) and Total equal the literal `expectedOverview` fixture values |
+| `tests/specs/inventorySort.spec.ts` | 5 | All four sort options (`az`, `za`, `lohi`, `hilo`): the page opens A to Z (and `az` is checked after moving to `za`), both price sorts break ties by name A to Z (guarded by a shared price existing), every inventory price shows exactly 2 decimals (checked in the low-to-high test), and the sort resets to A to Z after going to the cart and back through the side menu's All Items |
 
 **Tradeoff:** `inventorySort.spec.ts` derives its expected order by sorting what the page is already showing, not from a hardcoded list. Adding a product doesn't break it, and a broken sort still does. The cost: if the page loaded the wrong *set* of products, this spec would not notice.
 
@@ -88,7 +89,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 
 | File | What it provides |
 |------|------------------|
-| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()`: preconditions that assert they arrived |
+| `tests/support/flows.support.ts` | `loginAsStandardUser()`, `openCart()`, `reachOverview(productNames)` (adds the products, goes through checkout to the overview, and returns each product's name, price and description as the inventory showed them): preconditions that assert they arrived |
 | `tests/support/session.support.ts` | `resetBrowserState()`: deletes cookies, clears session and local storage, refreshes |
 | `tests/support/credentials.support.ts` | `validUser`, `lockedOutUser`: `SAUCE_USERNAME` / `SAUCE_PASSWORD` and the `SAUCE_LOCKED_OUT_` pair, with JSON fallback |
 
@@ -115,10 +116,10 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 |------|--------------|
 | `tests/pages/page.ts` | Base class: creates `WdioFactoryUtils`, provides `open(path)` |
 | `tests/pages/login.page.ts` | Username, password, login button, error message, logo; `openPage()`, `loginWithCredentials()`, `expectLoginErrorMessage()`, `expectLoginLogoText()` |
-| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions, and `getProducts()` pairing them; dynamic per-product name, price, add-to-cart and remove locators; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
+| `tests/pages/inventory.page.ts` | Product names and prices with retrying list assertions, and `getProducts()` pairing them; dynamic per-product name, price, add-to-cart and remove locators; a dynamic per-product description locator (`getInventoryItemDescriptionByNameText()`); `expectEveryPriceToMatch()` for the price format; `addItemsToCartByNames()`, `clickInventoryItemRemoveByName()`; `expectItemInCartByName()` / `expectItemNotInCartByName()` for a card's button state; owns `Header` |
 | `tests/pages/cart.page.ts` | Cart names and prices with retrying assertions, `removeItemFromCartByName()`, `removeAllItemsFromCart()`, checkout button; owns `Header` |
 | `tests/pages/checkout.page.ts` | First name, last name, postal code, continue; `fillPersonalInformationForm()`; owns `Header` |
-| `tests/pages/overview.page.ts` | Item names and prices with retrying assertions, numeric prices, **subtotal** (no tax or total), finish button; owns `Header` |
+| `tests/pages/overview.page.ts` | Item names, descriptions and prices with retrying assertions, numeric prices, subtotal, tax and total labels with retrying text assertions (`expectSubTotalText`, `expectTaxText`, `expectTotalText`), finish button; owns `Header` |
 | `tests/pages/complete.page.ts` | Confirmation header with a retrying assertion; owns `Header` |
 
 **Tradeoff:** singleton exports make imports simple. They are safe because WebdriverIO runs each spec file in its **own worker process**, so each worker has its own module instances. They would become unsafe only if several spec files ever shared a process.
@@ -174,6 +175,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | `expectNotExisting(element)` | Retrying assertion that nothing matches the locator |
 | `expectEventuallyEquals(label, readValues, expected)` | Re-reads a collected list until it matches (10 s), then asserts once more for a readable diff |
 | `expectTextsFromElements(elements, expected)` | `expectEventuallyEquals` over a locator's texts |
+| `expectEveryTextToMatch(elements, pattern)` | Re-reads a locator's texts until every one matches the pattern (10 s); fails on no matches, and the diff lists the texts that don't match |
 | `selectOptionFromSelect(element, attr, value)` | Waits for displayed, selects by attribute |
 | `clickAllIfExists(element)` | Clicks each match, **bounded by the initial count** (2 s probe), then waits for none to remain |
 | `getSelectorByValue(element, value)` | Substitutes `${value}` into selector and description; **throws** on a missing placeholder or on quote characters |
@@ -201,7 +203,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 | File | What it provides |
 |------|------------------|
 | `tests/utils/utilsMethods.utils.ts` | `sortLowToHighValues`, `sortHighToLowValues`, `sortTextAToZ`, `sortTextZToA`, `sortByPriceThenName` (price, then name A to Z for ties), `findSharedValues`, `toProductSlug`, `sumArrAndFixPrecision`, `fixNumberPrecision` |
-| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo` |
+| `tests/data/placeHolderData.json` | Users (credential fallback only), locked-out error text, `cartProducts`, `singleCartProduct`, `cartButtonLabels` (Add to cart / Remove), checkout `personalInfo`, `priceFormat` (the displayed price pattern), `expectedOverview` (item total, tax and total for `cartProducts`), `orderConfirmation` |
 
 **Tradeoff:** one data file is simple, but it can't hold per-environment values. It will need splitting when environments diverge.
 
@@ -273,7 +275,7 @@ Everything is TypeScript in `strict` mode, run through **tsx**. `npm run typeche
 ### Tagging
 
 - **Where:** `it()` titles.
-- **Rule:** tag `@smoke` only for a critical happy path that must pass before a deploy. There are three today.
+- **Rule:** tag `@smoke` only for a critical happy path that must pass before a deploy. There are four today.
 
 ### Static checks
 
@@ -305,13 +307,13 @@ Infrastructure: wdio.conf.ts
               │
               ├── Test Support: openCart() → UI Components: header → Browser Interaction: click
               │
-              ├── Page Objects: cartPage.expectItemCartNames / Prices
+              ├── Page Objects: cartPage.clickOnCheckoutButton → checkoutPage.fillPersonalInformationForm
+              │     (spec asserts each URL with expect(browser).toHaveUrl, and each page title)
+              │
+              ├── Page Objects: overviewPage.expectItemOverviewNames                  ← the products carried through
               │     └── Browser Interaction: expectTextsFromElements                  ← retries up to 10 s
               │
-              ├── Page Objects: checkoutPage.fillPersonalInformationForm → overviewPage.expect…
-              │     (spec asserts each URL with expect(browser).toHaveUrl)
-              │
-              ├── Pure Utilities: sumArrAndFixPrecision(prices) vs fixNumberPrecision(subtotal)
+              ├── Page Objects: overviewPage.clickOnFinishButton
               │
               └── Page Objects: completePage.expectCompletePurchaseText
                     └── Browser Interaction: expectText                             ← retrying, not a single read
@@ -332,7 +334,7 @@ Only gaps that change how new code should be written.
 | CI artifact on a red run (deferred by owner decision) | Neither workflow's upload step has `if: always()`, so the Allure report exists only for green runs. On a red run, read the job log. |
 | `--env dev` (deferred by owner decision) | Points at `saucedemo.com/v1/`, which is not a working target. Use `qa`. |
 | `browser.*` outside its sanctioned places | Beyond the factory, Test Support and `Page.open()`: specs make 4 `expect(browser).toHaveUrl` calls, `login.page.ts` reads `browser.options.baseUrl`, and `cart.page.ts` calls `browser.waitUntil` after `clickAllIfExists`, which already performs that same wait. URL assertions need either a factory helper or an explicit exception; that decision is still to be made. Don't add new ones in the meantime. |
-| Read-once getters with no callers | Eight public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reads once and races the page. |
+| Read-once getters with no callers | Ten public methods are never called: `getLoginErrorMessage`, `getLoginLogoText`, `getItemCartNames`, `getItemCartPrices`, `getItemOverviewNames`, overview's `getTextFromPrices`, `getValuesFromPrices` and `getSubTotalValue`, `getCompletePurchaseText`, `Header.getPageTitleText`. Each has a retrying `expect…` sibling. Use the sibling; a getter feeding `expect(...)` reads once and races the page. |
 | TypeScript 7 | Held on 6.0.x: every `typescript-eslint` release declares `typescript <6.1.0`. When one supports 7, check with `npm view typescript-eslint peerDependencies.typescript`, then `npm install -D typescript@^7 typescript-eslint@<that version>`, run `npm run typecheck` and `npm run lint`, and treat every new error as real (TS 7 is a rewrite). Check `eslint-plugin-wdio`'s peer range too, then run the suite and dispatch CI before a PR. |
 | Node 26 | Not supported yet; use Node 24 (`.nvmrc`). On 26, `@puppeteer/browsers` extracts ChromeDriver's licence files but not the binary, and WDIO then refuses the half-filled cache folder, so every test fails at startup. WDIO before 9.32 also couldn't create sessions on 26. |
 | Firefox | Configured and offered by `ci-on-demand.yml`, but no recorded CI run has used it. Treat it as unverified. |

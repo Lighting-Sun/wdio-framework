@@ -4,6 +4,7 @@ import cartPage from '../pages/cart.page.js';
 import UtilsMethods from '../utils/utilsMethods.utils.js';
 import { resetBrowserState } from '../support/session.support.js';
 import { loginAsStandardUser, openCart } from '../support/flows.support.js';
+import data from '../data/placeHolderData.json' with { type: 'json' };
 
 /**
  * SauceDemo's sort dropdown, which the page labels "filter" although it only
@@ -42,6 +43,8 @@ describe('product sorting scenarios', () => {
 
     it('Should sort products by price, low to high', async () => {
         await loginAsStandardUser();
+        // Every price shows "$", digits, "." and exactly 2 digits (KAN-6 AC-5).
+        await inventoryPage.expectEveryPriceToMatch(new RegExp(data.priceFormat));
         const products = await inventoryPage.getProducts();
         // Without two products at the same price the tie-break check below passes vacuously.
         expect(UtilsMethods.findSharedValues(products.map(({ price }) => price))).not.toHaveLength(0);

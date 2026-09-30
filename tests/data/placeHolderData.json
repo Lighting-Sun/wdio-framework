@@ -20,5 +20,12 @@
         "firstName": "Tester",
         "lastName": "SDET",
         "postalCode": "1223"
-    }
+    },
+    "priceFormat": "^\\$\\d+\\.\\d{2}$",
+    "expectedOverview": {
+        "itemTotal": "Item total: $47.97",
+        "tax": "Tax: $3.84",
+        "total": "Total: $51.81"
+    },
+    "orderConfirmation": "Thank you for your order!"
 }
