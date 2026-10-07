@@ -1,7 +1,9 @@
-import BaseComponent from './base.component.js';
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
+import { step } from '../utils/report.utils.js';
 import SideMenu from './sidemenu.component.js';
 
-class Header extends BaseComponent {
+class Header {
     sideMenu = new SideMenu();
 
     locators = {
@@ -19,7 +21,7 @@ class Header extends BaseComponent {
         },
         pageTitle: {
             selector: 'span.title',
-            description: 'title located in the header, indicating in which page we are on',
+            description: 'page title in the header',
         },
         sortFilterDropdown: {
             selector: 'select.product_sort_container',
@@ -28,33 +30,35 @@ class Header extends BaseComponent {
     };
 
     async getPageTitleText(): Promise<string> {
-        return await this.wdioFactoryUtils.getText(this.locators.pageTitle);
+        return await actions.getText(this.locators.pageTitle);
     }
 
     async expectPageTitle(expectedTitle: string): Promise<void> {
-        await this.wdioFactoryUtils.expectText(this.locators.pageTitle, expectedTitle);
+        await expectations.expectText(this.locators.pageTitle, expectedTitle);
     }
 
     async expectCartBadgeCount(expectedCount: number): Promise<void> {
-        await this.wdioFactoryUtils.expectText(this.locators.shoppingCartBadge, String(expectedCount));
+        await expectations.expectText(this.locators.shoppingCartBadge, String(expectedCount));
     }
 
     /** SauceDemo removes the badge entirely when the cart is empty, rather than showing "0". */
     async expectNoCartBadge(): Promise<void> {
-        await this.wdioFactoryUtils.expectNotExisting(this.locators.shoppingCartBadge);
+        await expectations.expectNotExisting(this.locators.shoppingCartBadge);
     }
 
     async clickOnBurgerMenuBtn(): Promise<void> {
-        await this.wdioFactoryUtils.click(this.locators.burgerMenuBtn);
+        await actions.click(this.locators.burgerMenuBtn);
     }
 
     async clickOnSortFilterDropdownOption(value: string): Promise<void> {
-        await this.wdioFactoryUtils.click(this.locators.sortFilterDropdown);
-        await this.wdioFactoryUtils.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', value);
+        await step(`🔽 Sort products by "${value}"`, async () => {
+            await actions.click(this.locators.sortFilterDropdown);
+            await actions.selectOptionFromSelect(this.locators.sortFilterDropdown, 'value', value);
+        });
     }
 
     async clickOnShoppingCartBtn(): Promise<void> {
-        await this.wdioFactoryUtils.click(this.locators.shoppingCartBtn);
+        await actions.click(this.locators.shoppingCartBtn);
     }
 }
 

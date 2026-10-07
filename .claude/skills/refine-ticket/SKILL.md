@@ -90,7 +90,7 @@ Both layers are built from the same flows (`tests/support/flows.support.ts`) and
 
 **Merge rule (focused):** cases with the same setup that assert on the same screen become one test. Keep them separate only when their setup differs, or when one failure would hide a result the reader needs separately.
 
-**Assertions are hard in both layers**, through page methods like the rest of the framework. Never mark a check soft. A journey's checks are transitions, so a failed one makes the rest meaningless anyway. When a focused case checks several independent values on one screen (a summary's totals, a row's fields), write its Expected as one set of values compared together, so a failure shows every mismatch in one diff rather than stopping at the first. Soft assertions (`expect.soft`) are not in the framework: they would need factory support and `SoftAssertionService` in `wdio.conf.ts`, and adding them is the owner's decision, not a refinement's.
+**Assertions are hard in both layers**, through page methods like the rest of the framework. Never mark a check soft. A journey's checks are transitions, so a failed one makes the rest meaningless anyway. When a focused case checks several independent values on one screen (a summary's totals, a row's fields), write its Expected as one set of values compared together, so a failure shows every mismatch in one diff rather than stopping at the first. Soft assertions (`expect.soft`) are not in the framework: they would need support in `elementExpectations.utils.ts` and `SoftAssertionService` in `wdio.conf.ts`, and adding them is the owner's decision, not a refinement's.
 
 **Flows** end with a hard check that they arrived (the target page's title), so a setup failure reads as a setup failure.
 

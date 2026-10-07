@@ -16,7 +16,7 @@ describe('checkout overview scenarios', () => {
      * worked out once from the rule (8% tax on the item total, rounded up to
      * the cent), not recomputed here.
      */
-    it('Should summarise the purchase with descriptions, prices, tax and total', async () => {
+    it('Should summarise the purchase with descriptions, prices, tax and total @KAN-6', async () => {
         await loginAsStandardUser();
         const products = await reachOverview(data.cartProducts);
         await overviewPage.expectItemOverviewNames(products.map(({ name }) => name));

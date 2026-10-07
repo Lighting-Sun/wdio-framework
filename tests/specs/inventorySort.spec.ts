@@ -22,7 +22,7 @@ describe('product sorting scenarios', () => {
         await resetBrowserState();
     });
 
-    it('Should sort products by name, A to Z', async () => {
+    it('Should sort products by name, A to Z @KAN-5', async () => {
         await loginAsStandardUser();
         const nameAToZ = UtilsMethods.sortTextAToZ(await inventoryPage.getTextFromNames());
         // The page opens A to Z, so selecting A to Z straight away proves nothing:
@@ -34,14 +34,14 @@ describe('product sorting scenarios', () => {
         await inventoryPage.expectTextFromNames(nameAToZ);
     });
 
-    it('Should sort products by name, Z to A', async () => {
+    it('Should sort products by name, Z to A @KAN-5', async () => {
         await loginAsStandardUser();
         const expectedOrder = UtilsMethods.sortTextZToA(await inventoryPage.getTextFromNames());
         await inventoryPage.header.clickOnSortFilterDropdownOption('za');
         await inventoryPage.expectTextFromNames(expectedOrder);
     });
 
-    it('Should sort products by price, low to high', async () => {
+    it('Should sort products by price, low to high @KAN-5 @KAN-6', async () => {
         await loginAsStandardUser();
         // Every price shows "$", digits, "." and exactly 2 digits (KAN-6 AC-5).
         await inventoryPage.expectEveryPriceToMatch(new RegExp(data.priceFormat));
@@ -54,7 +54,7 @@ describe('product sorting scenarios', () => {
         await inventoryPage.expectTextFromNames(expectedOrder.map(({ name }) => name));
     });
 
-    it('Should sort products by price, high to low', async () => {
+    it('Should sort products by price, high to low @KAN-5', async () => {
         await loginAsStandardUser();
         const products = await inventoryPage.getProducts();
         // Without two products at the same price the tie-break check below passes vacuously.
@@ -65,7 +65,7 @@ describe('product sorting scenarios', () => {
         await inventoryPage.expectTextFromNames(expectedOrder.map(({ name }) => name));
     });
 
-    it('Should reset the sort to name, A to Z after leaving the inventory page', async () => {
+    it('Should reset the sort to name, A to Z after leaving the inventory page @KAN-5', async () => {
         await loginAsStandardUser();
         const nameAToZ = UtilsMethods.sortTextAToZ(await inventoryPage.getTextFromNames());
         await inventoryPage.header.clickOnSortFilterDropdownOption('za');

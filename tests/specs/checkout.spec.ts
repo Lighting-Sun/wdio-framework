@@ -22,7 +22,7 @@ describe('checkout information scenarios', () => {
         await resetBrowserState();
     });
 
-    it('Should show the three checkout fields with their placeholders', async () => {
+    it('Should show the three checkout fields with their placeholders @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -33,7 +33,7 @@ describe('checkout information scenarios', () => {
         ]);
     });
 
-    it('Should block Continue and name First Name when it is empty', async () => {
+    it('Should block Continue and name First Name when it is empty @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -44,7 +44,7 @@ describe('checkout information scenarios', () => {
         await expectOnCheckoutInformation();
     });
 
-    it('Should block Continue and name Last Name when it is empty', async () => {
+    it('Should block Continue and name Last Name when it is empty @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -55,7 +55,7 @@ describe('checkout information scenarios', () => {
         await expectOnCheckoutInformation();
     });
 
-    it('Should block Continue and name Postal Code when it is empty', async () => {
+    it('Should block Continue and name Postal Code when it is empty @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -66,7 +66,7 @@ describe('checkout information scenarios', () => {
         await expectOnCheckoutInformation();
     });
 
-    it('Should name only the first empty field when several are empty', async () => {
+    it('Should name only the first empty field when several are empty @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -79,7 +79,7 @@ describe('checkout information scenarios', () => {
         await expectOnCheckoutInformation();
     });
 
-    it('Should accept fields holding only spaces as filled', async () => {
+    it('Should accept fields holding only spaces as filled @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         await openCheckoutInformation();
@@ -92,7 +92,7 @@ describe('checkout information scenarios', () => {
         await expectOnOverview();
     });
 
-    it('Should reach checkout information with an empty cart', async () => {
+    it('Should reach checkout information with an empty cart @KAN-7', async () => {
         await loginAsStandardUser();
         await openCart();
         // Without this guard the test would pass on a cart that had items in it.

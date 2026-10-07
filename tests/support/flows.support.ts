@@ -4,6 +4,7 @@ import inventoryPage from '../pages/inventory.page.js';
 import cartPage from '../pages/cart.page.js';
 import checkoutPage from '../pages/checkout.page.js';
 import overviewPage from '../pages/overview.page.js';
+import { step } from '../utils/report.utils.js';
 import { validUser } from './credentials.support.js';
 import data from '../data/placeHolderData.json' with { type: 'json' };
 
@@ -25,34 +26,44 @@ export interface InventoryProduct {
 
 /** Logs in as the standard user and confirms the inventory page is showing. */
 export async function loginAsStandardUser(): Promise<void> {
-    await loginPage.loginWithCredentials(validUser.username, validUser.password);
-    await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
-    await inventoryPage.header.expectPageTitle('Products');
+    await step('🧭 Log in as the standard user and land on Products', async () => {
+        await loginPage.loginWithCredentials(validUser.username, validUser.password);
+        await expect(browser).toHaveUrl(expect.stringContaining('/inventory'));
+        await inventoryPage.header.expectPageTitle('Products');
+    });
 }
 
 /** Opens the cart from the header and confirms the cart page is showing. */
 export async function openCart(): Promise<void> {
-    await inventoryPage.header.clickOnShoppingCartBtn();
-    await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
-    await cartPage.header.expectPageTitle('Your Cart');
+    await step('🧭 Open the cart', async () => {
+        await inventoryPage.header.clickOnShoppingCartBtn();
+        await expect(browser).toHaveUrl(expect.stringContaining('/cart'));
+        await cartPage.header.expectPageTitle('Your Cart');
+    });
 }
 
 /** Confirms the checkout information page is showing (URL and title). */
 export async function expectOnCheckoutInformation(): Promise<void> {
-    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
-    await checkoutPage.header.expectPageTitle('Checkout: Your Information');
+    await step('🔎 Expect to be on Checkout: Your Information', async () => {
+        await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'));
+        await checkoutPage.header.expectPageTitle('Checkout: Your Information');
+    });
 }
 
 /** Confirms the checkout overview page is showing (URL and title). */
 export async function expectOnOverview(): Promise<void> {
-    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
-    await overviewPage.header.expectPageTitle('Checkout: Overview');
+    await step('🔎 Expect to be on Checkout: Overview', async () => {
+        await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'));
+        await overviewPage.header.expectPageTitle('Checkout: Overview');
+    });
 }
 
 /** From the cart: selects Checkout and confirms the checkout information page is showing. */
 export async function openCheckoutInformation(): Promise<void> {
-    await cartPage.clickOnCheckoutButton();
-    await expectOnCheckoutInformation();
+    await step('🧭 Go from the cart to checkout information', async () => {
+        await cartPage.clickOnCheckoutButton();
+        await expectOnCheckoutInformation();
+    });
 }
 
 /**
@@ -62,20 +73,22 @@ export async function openCheckoutInformation(): Promise<void> {
  * them, for the overview to be compared against.
  */
 export async function reachOverview(productNames: string[]): Promise<InventoryProduct[]> {
-    const products: InventoryProduct[] = [];
-    for (const productName of productNames) {
-        const description = await inventoryPage.getInventoryItemDescriptionByNameText(productName);
-        const { itemName, itemPrice } = await inventoryPage.addItemToCartByName(productName);
-        products.push({ name: itemName, price: itemPrice, description });
-    }
-    await openCart();
-    await openCheckoutInformation();
-    await checkoutPage.fillPersonalInformationForm(
-        data.personalInfo.firstName,
-        data.personalInfo.lastName,
-        data.personalInfo.postalCode,
-    );
-    await checkoutPage.clickContinueButton();
-    await expectOnOverview();
-    return products;
+    return await step(`🧭 Reach the checkout overview with ${productNames.length} product(s)`, async () => {
+        const products: InventoryProduct[] = [];
+        for (const productName of productNames) {
+            const description = await inventoryPage.getInventoryItemDescriptionByNameText(productName);
+            const { itemName, itemPrice } = await inventoryPage.addItemToCartByName(productName);
+            products.push({ name: itemName, price: itemPrice, description });
+        }
+        await openCart();
+        await openCheckoutInformation();
+        await checkoutPage.fillPersonalInformationForm(
+            data.personalInfo.firstName,
+            data.personalInfo.lastName,
+            data.personalInfo.postalCode,
+        );
+        await checkoutPage.clickContinueButton();
+        await expectOnOverview();
+        return products;
+    });
 }

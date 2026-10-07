@@ -1,4 +1,6 @@
 import Header from '../components/header.component.js';
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
 import Page from './page.js';
 
 class CompletePage extends Page {
@@ -12,11 +14,11 @@ class CompletePage extends Page {
     };
 
     async getCompletePurchaseText(): Promise<string> {
-        return this.wdioFactory.getText(this.locators.completePurchaseHeader);
+        return actions.getText(this.locators.completePurchaseHeader);
     }
 
     async expectCompletePurchaseText(expectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.completePurchaseHeader, expectedText);
+        await expectations.expectText(this.locators.completePurchaseHeader, expectedText);
     }
 }
 

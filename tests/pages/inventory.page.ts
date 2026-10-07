@@ -1,5 +1,9 @@
 import Header from '../components/header.component.js';
 import UtilsMethods, { type ListedProduct } from '../utils/utilsMethods.utils.js';
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
+import { getSelectorByValue } from '../utils/locator.utils.js';
+import { step } from '../utils/report.utils.js';
 import Page from './page.js';
 
 type ItemDetail = { itemName: string; itemPrice: string };
@@ -42,7 +46,7 @@ class Inventory extends Page {
     };
 
     async getTextFromNames(): Promise<string[]> {
-        return await this.wdioFactory.getTextFromElements(this.locators.inventoryItemName);
+        return await actions.getTextFromElements(this.locators.inventoryItemName);
     }
 
     /**
@@ -50,15 +54,11 @@ class Inventory extends Page {
      * the price version below: selecting a sort option re-renders the grid.
      */
     async expectTextFromNames(expectedNames: string[]): Promise<void> {
-        await this.wdioFactory.expectEventuallyEquals(
-            'inventory item names',
-            () => this.getTextFromNames(),
-            expectedNames,
-        );
+        await expectations.expectEventuallyEquals('inventory item names', () => this.getTextFromNames(), expectedNames);
     }
 
     async getTextFromPrices(): Promise<string[]> {
-        const textFromPrices = await this.wdioFactory.getTextFromElements(this.locators.inventoryItemPrice);
+        const textFromPrices = await actions.getTextFromElements(this.locators.inventoryItemPrice);
         return textFromPrices.map((textToTrim) => textToTrim.slice(1));
     }
 
@@ -67,7 +67,7 @@ class Inventory extends Page {
      * re-render, so a single read can still see the previous order.
      */
     async expectTextFromPrices(expectedPrices: string[]): Promise<void> {
-        await this.wdioFactory.expectEventuallyEquals(
+        await expectations.expectEventuallyEquals(
             'inventory item prices',
             () => this.getTextFromPrices(),
             expectedPrices,
@@ -76,7 +76,7 @@ class Inventory extends Page {
 
     /** Retrying check that every price in the grid, as displayed with its `$`, matches `pattern`. */
     async expectEveryPriceToMatch(pattern: RegExp): Promise<void> {
-        await this.wdioFactory.expectEveryTextToMatch(this.locators.inventoryItemPrice, pattern);
+        await expectations.expectEveryTextToMatch(this.locators.inventoryItemPrice, pattern);
     }
 
     /** Every product's name and price, in the order the grid shows them. Reads once. */
@@ -92,11 +92,13 @@ class Inventory extends Page {
      * re-runs identically.
      */
     async addItemsToCartByNames(itemNames: string[]): Promise<ItemDetail[]> {
-        const itemDetails: ItemDetail[] = [];
-        for (const itemName of itemNames) {
-            itemDetails.push(await this.addItemToCartByName(itemName));
-        }
-        return itemDetails;
+        return await step(`🛒 Add ${itemNames.length} product(s) to the cart`, async () => {
+            const itemDetails: ItemDetail[] = [];
+            for (const itemName of itemNames) {
+                itemDetails.push(await this.addItemToCartByName(itemName));
+            }
+            return itemDetails;
+        });
     }
 
     getPropertyValuesFromArrayOfDetails(itemDetails: ItemDetail[], propertyToGet: keyof ItemDetail): string[] {
@@ -104,43 +106,37 @@ class Inventory extends Page {
     }
 
     async getInventoryItemNameByNameText(value: string): Promise<string> {
-        const selector = this.wdioFactory.getSelectorByValue(
-            this.locators.inventoryItemNameByName,
-            UtilsMethods.toProductSlug(value),
-        );
-        return await this.wdioFactory.getText(selector);
+        const selector = getSelectorByValue(this.locators.inventoryItemNameByName, UtilsMethods.toProductSlug(value));
+        return await actions.getText(selector);
     }
 
     async getInventoryItemPriceByNameText(value: string): Promise<string> {
-        const selector = this.wdioFactory.getSelectorByValue(
-            this.locators.inventoryItemPriceByName,
-            UtilsMethods.toProductSlug(value),
-        );
-        return await this.wdioFactory.getText(selector);
+        const selector = getSelectorByValue(this.locators.inventoryItemPriceByName, UtilsMethods.toProductSlug(value));
+        return await actions.getText(selector);
     }
 
     async getInventoryItemDescriptionByNameText(value: string): Promise<string> {
-        const selector = this.wdioFactory.getSelectorByValue(
+        const selector = getSelectorByValue(
             this.locators.inventoryItemDescriptionByName,
             UtilsMethods.toProductSlug(value),
         );
-        return await this.wdioFactory.getText(selector);
+        return await actions.getText(selector);
     }
 
     async clickInventoryItemAddToCartByName(value: string): Promise<void> {
-        const selector = this.wdioFactory.getSelectorByValue(
+        const selector = getSelectorByValue(
             this.locators.inventoryAddToCartButtonByName,
             UtilsMethods.toProductSlug(value),
         );
-        await this.wdioFactory.click(selector);
+        await actions.click(selector);
     }
 
     async clickInventoryItemRemoveByName(value: string): Promise<void> {
-        const selector = this.wdioFactory.getSelectorByValue(
+        const selector = getSelectorByValue(
             this.locators.inventoryRemoveButtonByName,
             UtilsMethods.toProductSlug(value),
         );
-        await this.wdioFactory.click(selector);
+        await actions.click(selector);
     }
 
     /**
@@ -148,35 +144,39 @@ class Inventory extends Page {
      * Checking both sides stops the test passing on a card that shows both.
      */
     async expectItemInCartByName(value: string, removeLabel: string): Promise<void> {
-        const slug = UtilsMethods.toProductSlug(value);
-        await this.wdioFactory.expectText(
-            this.wdioFactory.getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug),
-            removeLabel,
-        );
-        await this.wdioFactory.expectNotExisting(
-            this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
-        );
+        await step(`🔎 Expect "${value}" to show as in the cart`, async () => {
+            const slug = UtilsMethods.toProductSlug(value);
+            await expectations.expectText(
+                getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug),
+                removeLabel,
+            );
+            await expectations.expectNotExisting(
+                getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
+            );
+        });
     }
 
     async expectItemNotInCartByName(value: string, addToCartLabel: string): Promise<void> {
-        const slug = UtilsMethods.toProductSlug(value);
-        await this.wdioFactory.expectText(
-            this.wdioFactory.getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
-            addToCartLabel,
-        );
-        await this.wdioFactory.expectNotExisting(
-            this.wdioFactory.getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug),
-        );
+        await step(`🔎 Expect "${value}" to show as not in the cart`, async () => {
+            const slug = UtilsMethods.toProductSlug(value);
+            await expectations.expectText(
+                getSelectorByValue(this.locators.inventoryAddToCartButtonByName, slug),
+                addToCartLabel,
+            );
+            await expectations.expectNotExisting(getSelectorByValue(this.locators.inventoryRemoveButtonByName, slug));
+        });
     }
 
     async addItemToCartByName(value: string): Promise<ItemDetail> {
-        const itemNameText = await this.getInventoryItemNameByNameText(value);
-        const itemPriceText = await this.getInventoryItemPriceByNameText(value);
-        await this.clickInventoryItemAddToCartByName(value);
-        return {
-            itemName: itemNameText,
-            itemPrice: itemPriceText,
-        };
+        return await step(`🛒 Add "${value}" to the cart`, async () => {
+            const itemNameText = await this.getInventoryItemNameByNameText(value);
+            const itemPriceText = await this.getInventoryItemPriceByNameText(value);
+            await this.clickInventoryItemAddToCartByName(value);
+            return {
+                itemName: itemNameText,
+                itemPrice: itemPriceText,
+            };
+        });
     }
 }
 

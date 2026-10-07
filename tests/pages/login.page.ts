@@ -1,3 +1,6 @@
+import * as actions from '../utils/elementActions.utils.js';
+import * as expectations from '../utils/elementExpectations.utils.js';
+import { step } from '../utils/report.utils.js';
 import Page from './page.js';
 
 class LoginPage extends Page {
@@ -13,6 +16,7 @@ class LoginPage extends Page {
         passwordInput: {
             selector: "input[data-test='password']",
             description: 'password input field',
+            sensitive: true,
         },
         loginErrorMessage: {
             selector: "h3[data-test='error']",
@@ -29,37 +33,39 @@ class LoginPage extends Page {
     }
 
     async fillUsername(username: string): Promise<void> {
-        await this.wdioFactory.setValue(this.locators.usernameInput, username);
+        await actions.setValue(this.locators.usernameInput, username);
     }
 
     async fillPassword(password: string): Promise<void> {
-        await this.wdioFactory.setValue(this.locators.passwordInput, password);
+        await actions.setValue(this.locators.passwordInput, password);
     }
 
     async clickOnLoginBtn(): Promise<void> {
-        await this.wdioFactory.click(this.locators.loginButton);
+        await actions.click(this.locators.loginButton);
     }
 
     async getLoginErrorMessage(): Promise<string> {
-        return await this.wdioFactory.getText(this.locators.loginErrorMessage);
+        return await actions.getText(this.locators.loginErrorMessage);
     }
 
     async getLoginLogoText(): Promise<string> {
-        return await this.wdioFactory.getText(this.locators.loginLogo);
+        return await actions.getText(this.locators.loginLogo);
     }
 
     async expectLoginErrorMessage(expectedMessage: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.loginErrorMessage, expectedMessage);
+        await expectations.expectText(this.locators.loginErrorMessage, expectedMessage);
     }
 
     async expectLoginLogoText(expectedText: string): Promise<void> {
-        await this.wdioFactory.expectText(this.locators.loginLogo, expectedText);
+        await expectations.expectText(this.locators.loginLogo, expectedText);
     }
 
     async loginWithCredentials(username: string, password: string): Promise<void> {
-        await this.fillUsername(username);
-        await this.fillPassword(password);
-        await this.clickOnLoginBtn();
+        await step(`👤 Log in as "${username}"`, async () => {
+            await this.fillUsername(username);
+            await this.fillPassword(password);
+            await this.clickOnLoginBtn();
+        });
     }
 }
 

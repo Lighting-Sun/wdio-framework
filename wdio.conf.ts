@@ -1,6 +1,7 @@
 import allure from 'allure-commandline';
 import allureReporter from '@wdio/allure-reporter';
 import fs from 'fs';
+import path from 'path';
 import yargs from 'yargs';
 
 const argv = yargs(process.argv.slice(2)).parseSync();
@@ -12,7 +13,8 @@ const environments: Record<string, string> = {
     qa: 'https://www.saucedemo.com/',
     dev: 'https://www.saucedemo.com/v1/',
 };
-const baseUrl = environments[selectedEnv] ?? environments['qa'];
+const effectiveEnv = selectedEnv in environments ? selectedEnv : 'qa';
+const baseUrl = environments[effectiveEnv];
 
 /**
  * `HEADED=1` shows the browser window, for watching a local run. It is ignored
@@ -37,7 +39,43 @@ const browserCap: Record<string, object> = {
     },
 };
 
-const selectedBrowserCap = browserCap[runInBrowser] ?? browserCap['chrome'];
+const effectiveBrowser = runInBrowser in browserCap ? runInBrowser : 'chrome';
+const selectedBrowserCap = browserCap[effectiveBrowser];
+
+/**
+ * Failure buckets for the report's Categories tab, matched top to bottom on
+ * the error message. They key off the messages elementActions.utils.ts and
+ * locator.utils.ts throw, so the first question on a red run (the app, or
+ * the test?) is answered before anyone opens a stack trace. A failure no rule
+ * matches falls into Allure's default Product/Test defects buckets.
+ */
+const ALLURE_CATEGORIES = [
+    {
+        name: 'Test defect: dynamic locator rejected',
+        messageRegex: '(?s).*Cannot substitute.*',
+    },
+    {
+        name: 'Element never became ready (locator, timing or app state)',
+        messageRegex: '(?s).*was not (clickable|enabled|visible) before timeout.*',
+    },
+    {
+        name: 'Page showed the wrong value (possible product defect)',
+        matchedStatuses: ['failed'],
+        messageRegex: '(?s).*(Expect \\$|expect\\(received\\)|Expected).*',
+    },
+];
+
+/**
+ * Browser console output for the current test, collected over WebDriver BiDi
+ * and attached when the test fails. Reset per test in `beforeTest`.
+ */
+let consoleEntries: string[] = [];
+
+/** Where an `@KAN-123` tag in a test title links to in the Allure report. */
+const JIRA_ISSUE_URL_TEMPLATE = 'https://harveydavid14.atlassian.net/browse/{}';
+
+/** `@KAN-123`-style tags name the Jira ticket a test was written from. */
+const JIRA_KEY_TAG = /^[A-Z][A-Z0-9]+-\d+$/;
 
 /** Retry budget per spec file. Referenced by `onWorkerEnd` to detect flakes. */
 const SPEC_FILE_RETRIES = 1;
@@ -92,6 +130,16 @@ export const config: WebdriverIO.Config = {
                 outputDir: allureDir + '/allure-results',
                 disableWebdriverStepsReporting: true,
                 disableWebdriverScreenshotsReporting: true,
+                issueLinkTemplate: JIRA_ISSUE_URL_TEMPLATE,
+                // Shown in the report's Environment panel. The effective values, after
+                // an unknown --env or --browser has fallen back to its default.
+                reportedEnvironmentVars: {
+                    Environment: effectiveEnv,
+                    'Base URL': baseUrl,
+                    Browser: effectiveBrowser,
+                    Headed: String(headed),
+                    Node: process.version,
+                },
             },
         ],
     ],
@@ -115,6 +163,20 @@ export const config: WebdriverIO.Config = {
                 console.log('✔ dir got created');
             }
         }
+        const resultsDir = allureDir + '/allure-results';
+        fs.mkdirSync(resultsDir, { recursive: true });
+        fs.writeFileSync(path.join(resultsDir, 'categories.json'), JSON.stringify(ALLURE_CATEGORIES, null, 2));
+    },
+
+    /** Starts collecting console output. Without BiDi there is nothing to collect, so it is skipped. */
+    before: async function () {
+        if (!browser.isBidi) {
+            return;
+        }
+        await browser.sessionSubscribe({ events: ['log.entryAdded'] });
+        browser.on('log.entryAdded', (entry) => {
+            consoleEntries.push(`[${entry.level}] ${entry.text ?? ''}`);
+        });
     },
 
     /**
@@ -132,6 +194,27 @@ export const config: WebdriverIO.Config = {
         }
     },
 
+    /**
+     * Turns the tags in a test title into Allure labels, so the report can be
+     * filtered and grouped without any Allure call in a spec: `@KAN-4` links
+     * the Jira ticket, every other tag (`@smoke`, `@journey`) becomes an
+     * Allure tag, `@smoke` also marks the test critical, and the `describe`
+     * title becomes the feature.
+     */
+    beforeTest: async function (test: { title: string; parent: string }) {
+        consoleEntries = [];
+        const tags: string[] = test.title.match(/@[\w-]+/g) ?? [];
+        for (const tag of tags.map((t) => t.slice(1))) {
+            if (JIRA_KEY_TAG.test(tag)) {
+                await allureReporter.addIssue(tag);
+            } else {
+                await allureReporter.addTag(tag);
+            }
+        }
+        await allureReporter.addSeverity(tags.includes('@smoke') ? 'critical' : 'normal');
+        await allureReporter.addFeature(test.parent);
+    },
+
     afterTest: async function (_test: unknown, _context: unknown, { passed }: { passed: boolean }) {
         if (passed) {
             return;
@@ -140,6 +223,14 @@ export const config: WebdriverIO.Config = {
         // Must be awaited: afterTest resolving before the attachment is written
         // can lose the screenshot during teardown, which defeats the purpose of this hook.
         await allureReporter.addAttachment('Screenshot on failure', Buffer.from(screenshot, 'base64'), 'image/png');
+        await allureReporter.addAttachment('Page URL on failure', await browser.getUrl(), 'text/plain');
+        if (consoleEntries.length > 0) {
+            await allureReporter.addAttachment(
+                'Browser console during the test',
+                consoleEntries.join('\n'),
+                'text/plain',
+            );
+        }
     },
 
     onComplete: function () {
